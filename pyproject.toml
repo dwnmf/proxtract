@@ -1,0 +1,24 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "proxtract"
+version = "0.1.0"
+description = "Interactive CLI to extract project files into a single bundle"
+authors = [
+    { name = "Proxtract Team" }
+]
+readme = "README.md"
+requires-python = ">=3.9"
+dependencies = [
+    "rich>=13.7.0",
+    "art>=6.0",
+    "prompt_toolkit>=3.0.39"
+]
+
+[project.scripts]
+proxtract = "proxtract.main:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
