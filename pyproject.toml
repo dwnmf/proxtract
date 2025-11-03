@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "proxtract"
-version = "0.1.0"
+version = "0.2.22"
 description = "Interactive CLI to extract project files into a single bundle"
 authors = [
     { name = "Proxtract Team" }
