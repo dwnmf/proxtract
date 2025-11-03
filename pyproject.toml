@@ -11,14 +11,34 @@ authors = [
 ]
 readme = "README.md"
 requires-python = ">=3.9"
+license = "MIT"
+keywords = ["cli", "developer-tools", "prompt-engineering", "project-extraction"]
+license-files = ["LICENSE"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "Environment :: Console",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Operating System :: OS Independent"
+]
 dependencies = [
     "rich>=13.7.0",
-    "art>=6.0",
     "prompt_toolkit>=3.0.39"
 ]
 
 [project.scripts]
 proxtract = "proxtract.main:main"
+
+[project.optional-dependencies]
+banner = ["art>=6.0"]
+dev = [
+    "build>=1.0.3",
+    "twine>=4.0.2"
+]
 
 [tool.setuptools.packages.find]
 where = ["src"]

@@ -10,7 +10,13 @@ Proxtract is an interactive CLI for extracting readable project files into a sin
 ## Installation
 
 ```bash
-pip install .
+pip install proxtract
+```
+
+Install with the optional ASCII art banner extras by adding `banner`:
+
+```bash
+pip install proxtract[banner]
 ```
 
 ## Usage
@@ -44,3 +50,17 @@ The script launches the REPL (and exits cleanly) and performs a one-file extract
 - Dependencies managed via `pyproject.toml`
 
 Run the REPL locally without installing by executing `python -m proxtract` from the project root. The banner gracefully falls back to ASCII art if the optional `art` dependency is unavailable.
+
+For editable development installs, use:
+
+```bash
+pip install -e .[dev,banner]
+```
+
+## Publishing to PyPI
+
+1. Ensure `dist/` is clean: `rm -rf dist/ build/`
+2. Build the distribution artifacts: `python -m build`
+3. Inspect the generated wheels and sdist under `dist/`
+4. Run a sanity check: `twine check dist/*`
+5. Upload to PyPI (or TestPyPI) with `twine upload dist/*`
