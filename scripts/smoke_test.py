@@ -37,6 +37,28 @@ def _check_repl_launch() -> None:
         raise RuntimeError("Welcome banner missing from REPL output")
 
 
+def _check_cli_extract() -> None:
+    with tempfile.TemporaryDirectory() as tmpdir:
+        root = Path(tmpdir)
+        (root / "sample.txt").write_text("hello cli", encoding="utf-8")
+        output = root / "cli_output.txt"
+
+        process = subprocess.Popen(
+            [sys.executable, "-m", "proxtract", "extract", str(root), "--output", str(output)],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+        )
+
+        stdout, stderr = process.communicate(timeout=15)
+
+        if process.returncode != 0:
+            raise RuntimeError(f"CLI extract failed: {stderr or stdout}")
+
+        if not output.exists():
+            raise RuntimeError("CLI extract did not produce the expected output file")
+
+
 def _check_core_extraction() -> None:
     extractor = FileExtractor()
     with tempfile.TemporaryDirectory() as tmpdir:
@@ -57,6 +79,7 @@ def _check_core_extraction() -> None:
 
 def main() -> None:
     _check_repl_launch()
+    _check_cli_extract()
     _check_core_extraction()
     print("Smoke test passed. CLI launches and core extraction works.")
 

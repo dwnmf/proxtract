@@ -11,6 +11,18 @@ from prompt_toolkit.document import Document
 
 
 BOOLEAN_CHOICES: Sequence[str] = ("on", "off", "true", "false", "yes", "no", "1", "0")
+EXTRACT_FLAGS: Sequence[str] = (
+    "--output",
+    "-o",
+    "--max-size",
+    "--compact",
+    "--no-compact",
+    "--skip-empty",
+    "--no-skip-empty",
+    "--copy",
+)
+INCLUDE_SUBCOMMANDS: Sequence[str] = ("list", "add", "remove", "clear")
+EXCLUDE_SUBCOMMANDS: Sequence[str] = ("list", "add", "remove", "clear")
 
 
 @dataclass(frozen=True)
@@ -111,10 +123,16 @@ class CommandCompleter(Completer):
         return self._alias_lookup.aliases.get(key)
 
     def _complete_setting_value(self, target: str, fragment: str, complete_event) -> Iterable[Completion]:
-        if target in {"compact", "skip_empty"}:
+        if target in {"compact", "skip_empty", "use_gitignore", "token_count", "copy_clipboard"}:
             yield from self._complete_boolean(fragment)
         elif target == "output":
             yield from self._complete_path(fragment, complete_event)
+        elif target == "tokenizer_model":
+            options = ("gpt-4", "gpt-4o", "gpt-3.5-turbo")
+            start = -len(fragment)
+            for option in options:
+                if option.startswith(fragment):
+                    yield Completion(option, start_position=start)
 
     # endregion --------------------------------------------------------------
 
@@ -157,6 +175,31 @@ class CommandCompleter(Completer):
             return
 
         if command == "/extract":
+            if len(args) == 1:
+                frag = current_arg
+                if frag.startswith("-"):
+                    for flag in EXTRACT_FLAGS:
+                        if flag.startswith(frag):
+                            yield Completion(flag, start_position=-len(frag))
+                else:
+                    yield from self._complete_path(frag, complete_event)
+                    for flag in EXTRACT_FLAGS:
+                        if flag.startswith(frag):
+                            yield Completion(flag, start_position=-len(frag))
+                return
+
+            prev_token = args[-2] if len(args) >= 2 else ""
+
+            if current_arg.startswith("-"):
+                for flag in EXTRACT_FLAGS:
+                    if flag.startswith(current_arg):
+                        yield Completion(flag, start_position=-len(current_arg))
+                return
+
+            if prev_token in {"--output", "-o"}:
+                yield from self._complete_path(current_arg, complete_event)
+                return
+
             yield from self._complete_path(current_arg, complete_event)
             return
 
@@ -181,4 +224,22 @@ class CommandCompleter(Completer):
                 value_fragment = inline_value_fragment
 
             yield from self._complete_setting_value(target, value_fragment, complete_event)
+            return
+
+        if command == "/include":
+            if len(args) <= 1:
+                frag = current_arg
+                for option in INCLUDE_SUBCOMMANDS:
+                    if option.startswith(frag):
+                        yield Completion(option, start_position=-len(frag))
+                return
+            return
+
+        if command == "/exclude":
+            if len(args) <= 1:
+                frag = current_arg
+                for option in EXCLUDE_SUBCOMMANDS:
+                    if option.startswith(frag):
+                        yield Completion(option, start_position=-len(frag))
+                return
             return
