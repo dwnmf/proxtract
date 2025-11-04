@@ -22,6 +22,9 @@ class CompletionInput(Input):
         **kwargs,
     ) -> None:
         super().__init__(value=value, **kwargs)
+        if mode not in {"text", "path", "list"}:
+            raise ValueError(f"Unsupported completion mode: {mode}")
+
         self.mode = mode
         self._static_suggestions: List[str] = list(suggestions or [])
         self._cycle_values: List[str] = []
@@ -77,14 +80,15 @@ class CompletionInput(Input):
         if self.mode == "path":
             return self._path_completions(seed)
 
+        if self.mode == "list":
+            prefix, fragment = self._split_list_seed(seed)
+            matches = self._match_static(fragment)
+            return [f"{prefix}{match}" for match in matches]
+
         if not self._static_suggestions:
             return []
 
-        lowered = seed.lower()
-        candidates = [item for item in self._static_suggestions if item.lower().startswith(lowered)]
-        if not candidates and lowered:
-            candidates = [item for item in self._static_suggestions if lowered in item.lower()]
-        return sorted(dict.fromkeys(candidates))
+        return self._match_static(seed)
 
     def _path_completions(self, seed: str) -> List[str]:
         seed = seed or ""
@@ -130,6 +134,36 @@ class CompletionInput(Input):
                 suggestion = f"{suggestion}{os.sep}"
             completions.append(suggestion)
         return completions
+
+    def _split_list_seed(self, seed: str) -> tuple[str, str]:
+        text = seed or ""
+        if "," not in text:
+            leading_ws = len(text) - len(text.lstrip())
+            prefix = text[:leading_ws]
+            fragment = text[leading_ws:]
+            return prefix, fragment
+
+        index = text.rfind(",")
+        prefix = text[: index + 1]
+        after_sep = text[index + 1 :]
+        whitespace_len = len(after_sep) - len(after_sep.lstrip())
+        prefix += after_sep[:whitespace_len]
+        fragment = after_sep[whitespace_len:]
+        return prefix, fragment
+
+    def _match_static(self, seed: str) -> List[str]:
+        if not self._static_suggestions:
+            return []
+
+        lowered = seed.lower()
+        candidates = [item for item in self._static_suggestions if item.lower().startswith(lowered)]
+        if not candidates and lowered:
+            candidates = [item for item in self._static_suggestions if lowered in item.lower()]
+        ordered_unique: dict[str, None] = {}
+        for item in candidates:
+            if item not in ordered_unique:
+                ordered_unique[item] = None
+        return list(ordered_unique.keys())
 
     def _apply_completion(self, value: str) -> None:
         self.value = value

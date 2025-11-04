@@ -33,10 +33,16 @@ class EditSettingScreen(ModalScreen[str | None]):
         self._initial_value = initial_value
 
     def compose(self) -> ComposeResult:
+        mode = "path"
+        if self._setting_type == "list":
+            mode = "list"
+        elif self._setting_type != "path":
+            mode = "text"
+
         input_widget = CompletionInput(
             value=self._initial_value,
             id="edit-input",
-            mode="path" if self._setting_type == "path" else "text",
+            mode=mode,
             suggestions=self._initial_suggestions(),
         )
 
