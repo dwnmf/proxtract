@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from functools import partial
 from pathlib import Path
 from typing import Optional
 
@@ -10,7 +11,7 @@ from textual.app import ComposeResult
 from textual.containers import Horizontal, Vertical
 from textual.message import Message
 from textual.screen import ModalScreen
-from textual.worker import Worker
+from textual.worker import Worker, WorkerState
 from textual.widgets import Button, Input, Label, ProgressBar
 
 from ...core import ExtractionError, ExtractionStats
@@ -68,7 +69,7 @@ class ExtractScreen(ModalScreen[ExtractionStats | None]):
                 Button("Start Extraction", id="start", variant="primary"),
                 id="extract-buttons",
             ),
-            ProgressBar(id="extract-progress", total=100, visible=False),
+            ProgressBar(id="extract-progress", total=100),
             Label("", id="extract-status"),
             SummaryDisplay(),
             id="extract-container",
@@ -85,6 +86,8 @@ class ExtractScreen(ModalScreen[ExtractionStats | None]):
         self._summary = self.query_one(SummaryDisplay)
         self._start_button = self.query_one("#start", Button)
         self._cancel_button = self.query_one("#cancel", Button)
+        if self._progress_bar is not None:
+            self._progress_bar.display = False
         if self._cancel_button is not None:
             self._cancel_button.label = "Cancel"
 
@@ -112,18 +115,23 @@ class ExtractScreen(ModalScreen[ExtractionStats | None]):
         if self._start_button is not None:
             self._start_button.disabled = True
 
+        if self._cancel_button is not None:
+            self._cancel_button.label = "Cancel"
+
         if self._progress_bar is not None:
-            self._progress_bar.visible = True
-            self._progress_bar.update(total=100, completed=0)
+            self._progress_bar.display = True
+            self._progress_bar.update(progress=0, total=100)
 
         self._update_status("Preparing...")
 
+        work = partial(self._execute_extraction, root, output)
         self._worker = self.run_worker(
-            self._execute_extraction,
-            root,
-            output,
+            work,
+            name=root,
+            group=output,
             exclusive=True,
             thread=True,
+            exit_on_error=False,
         )
 
     def _update_status(self, message: str) -> None:
@@ -133,6 +141,8 @@ class ExtractScreen(ModalScreen[ExtractionStats | None]):
     def _execute_extraction(self, root: str, output: str) -> None:
         root_path = Path(root).expanduser()
         output_path = Path(output).expanduser()
+
+        self.app.call_from_thread(self._update_status, "Scanning files...")
 
         try:
             total_files = sum(1 for path in root_path.rglob("*") if path.is_file())
@@ -177,25 +187,26 @@ class ExtractScreen(ModalScreen[ExtractionStats | None]):
 
     def on_extraction_started(self, message: ExtractionStarted) -> None:
         if self._progress_bar is not None:
-            self._progress_bar.update(total=message.total, completed=0)
+            self._progress_bar.update(progress=0, total=message.total)
         self._update_status("Scanning files...")
 
     def on_extraction_progress(self, message: ExtractionProgress) -> None:
         if self._progress_bar is not None:
-            self._progress_bar.update(total=message.total, completed=message.processed)
+            self._progress_bar.update(progress=message.processed, total=message.total)
         if message.description:
             self._update_status(f"Processing {message.description}")
 
     def on_extraction_failed(self, message: ExtractionFailed) -> None:
         if self._progress_bar is not None:
-            self._progress_bar.visible = False
+            self._progress_bar.display = False
         if self._start_button is not None:
             self._start_button.disabled = False
         self._update_status(f"Error: {message.message}")
+        self._worker = None
 
     def on_extraction_completed(self, message: ExtractionCompleted) -> None:
         if self._progress_bar is not None:
-            self._progress_bar.visible = False
+            self._progress_bar.display = False
         if self._start_button is not None:
             self._start_button.disabled = False
         if self._cancel_button is not None:
@@ -203,6 +214,8 @@ class ExtractScreen(ModalScreen[ExtractionStats | None]):
         if self._summary is not None:
             self._summary.update_stats(message.stats)
         self._update_status("Extraction complete.")
+        self._worker = None
+        self.dismiss(message.stats)
 
         if self.app_state.copy_to_clipboard:
             try:
@@ -218,7 +231,40 @@ class ExtractScreen(ModalScreen[ExtractionStats | None]):
                 self.app.notify("pyperclip not installed; cannot copy to clipboard.", severity="warning")
 
     def dismiss(self, result: ExtractionStats | None = None) -> None:  # type: ignore[override]
+        if self._worker is not None and self._worker.is_running:
+            self._worker.cancel()
+            self._worker = None
         super().dismiss(result if result is not None else self.app_state.last_stats)
+
+    def on_worker_state_changed(self, event: Worker.StateChanged) -> None:
+        if self._worker is None or event.worker is not self._worker:
+            return
+
+        if event.state == WorkerState.RUNNING:
+            return
+
+        self._worker = None
+
+        if self._progress_bar is not None:
+            self._progress_bar.display = False
+
+        if self._start_button is not None:
+            self._start_button.disabled = False
+
+        if self._cancel_button is not None:
+            self._cancel_button.label = "Close"
+
+        if event.state == WorkerState.CANCELLED:
+            self._update_status("Extraction cancelled.")
+            event.stop()
+            return
+
+        if event.state == WorkerState.ERROR:
+            error = event.worker.error
+            message = str(error) if error is not None else "Unknown worker error"
+            self._update_status(f"Error: {message}")
+            self.app.notify(f"Extraction failed: {message}", severity="error")
+            event.stop()
 
 
 __all__ = ["ExtractScreen"]

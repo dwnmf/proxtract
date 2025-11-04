@@ -12,6 +12,7 @@ from textual.message import Message
 from textual.screen import Screen
 from textual.widgets import Footer, Header, Label, ListView
 
+from ...core import ExtractionStats
 from ...state import AppState
 from ..widgets import ActionItem, SettingItem, SettingMetadata, SummaryDisplay
 from .edit_setting_screen import EditSettingScreen
@@ -109,31 +110,47 @@ class MainScreen(Screen):
             item.update_content()
             return
 
-        new_value = await self.app.push_screen_wait(
+        await self.app.push_screen(
             EditSettingScreen(
                 label=spec.label,
                 description=spec.description,
                 initial_value=self._value_to_string(current_value, spec.setting_type),
-            )
+            ),
+            callback=lambda value, attr=attr: self._apply_setting_update(attr, value),
         )
-
-        if new_value is None:
-            return
-
-        parsed = self._parse_value(new_value, spec.setting_type)
-        setattr(self.app_state, attr, parsed)
-        item.update_content()
 
     async def _handle_action_selected(self, item) -> None:
         if not isinstance(item, ActionItem):
             return
 
         if item.action_id == "extract":
-            stats = await self.app.push_screen_wait(ExtractScreen(self.app_state))
-            if stats is not None and self._summary is not None:
-                self._summary.update_stats(stats)
-                if "output_path" in self._items:
-                    self._items["output_path"].update_content()
+            await self.app.push_screen(
+                ExtractScreen(self.app_state),
+                callback=self._handle_extract_result,
+            )
+
+    def _handle_extract_result(self, stats: ExtractionStats | None) -> None:
+        if stats is None:
+            stats = self.app_state.last_stats
+
+        if stats is not None and self._summary is not None:
+            self._summary.update_stats(stats)
+
+        output_item = self._items.get("output_path")
+        if output_item is not None:
+            output_item.update_content()
+
+    def _apply_setting_update(self, attr: str, raw_value: str | None) -> None:
+        if raw_value is None:
+            return
+
+        spec = self._spec_by_attr(attr)
+        parsed = self._parse_value(raw_value, spec.setting_type)
+        setattr(self.app_state, attr, parsed)
+
+        item = self._items.get(attr)
+        if item is not None:
+            item.update_content()
 
     @property
     def _setting_specs(self) -> Sequence[SettingSpec]:
