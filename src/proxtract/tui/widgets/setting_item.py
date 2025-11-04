@@ -27,10 +27,12 @@ class SettingItem(ListItem):
     SettingItem {
         padding: 1 2;
         height: auto;
+        margin: 0 0 1 0;
     }
 
     SettingItem.-selected {
-        background: $accent 10%;
+        background: $accent 20%;
+        color: $text;
     }
     """
 

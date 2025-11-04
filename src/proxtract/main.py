@@ -12,6 +12,13 @@ from rich.console import Console
 from .state import AppState
 from .tui.app import ProxtractApp
 
+try:  # Shell auto-completion support
+    import argcomplete  # type: ignore
+    from argcomplete.completers import FilesCompleter  # type: ignore
+except Exception:  # pragma: no cover - degrade gracefully if unavailable
+    argcomplete = None  # type: ignore[assignment]
+    FilesCompleter = None  # type: ignore[assignment]
+
 try:  # Config helpers are optional if tomllib/tomli missing
     from .config import apply_config, load_config, save_config as _save_config
 except Exception:  # pragma: no cover - fallback when persistence unavailable
@@ -98,12 +105,13 @@ def _launch_tui() -> None:
 
 
 def main(argv: Optional[Sequence[str]] = None) -> None:
-    parser = argparse.ArgumentParser(prog="proxtract")
+    program_name = Path(sys.argv[0]).name or "proxtract"
+    parser = argparse.ArgumentParser(prog=program_name, allow_abbrev=False)
     subparsers = parser.add_subparsers(dest="command")
 
-    p_extract = subparsers.add_parser("extract", help="Run a one-off extraction")
-    p_extract.add_argument("path", help="Root directory to extract")
-    p_extract.add_argument("--output", "-o", help="Output file path")
+    p_extract = subparsers.add_parser("extract", help="Run a one-off extraction", aliases=["e"])
+    path_argument = p_extract.add_argument("path", help="Root directory to extract")
+    output_argument = p_extract.add_argument("--output", "-o", help="Output file path")
     p_extract.add_argument("--max-size", type=int, help="Maximum file size in KB")
     group_compact = p_extract.add_mutually_exclusive_group()
     group_compact.add_argument("--compact", action="store_true", help="Enable compact formatting")
@@ -116,12 +124,30 @@ def main(argv: Optional[Sequence[str]] = None) -> None:
     group_gitignore.add_argument("--no-gitignore", dest="no_gitignore", action="store_true", help="Ignore .gitignore rules")
     p_extract.add_argument("--include", action="append", help="Include glob pattern (repeatable)")
     p_extract.add_argument("--exclude", action="append", help="Exclude glob pattern (repeatable)")
-    p_extract.add_argument("--tokenizer-model", help="Tokenizer model for token counting")
+    tokenizer_argument = p_extract.add_argument("--tokenizer-model", help="Tokenizer model for token counting")
     p_extract.add_argument("--no-token-count", action="store_true", help="Disable token counting")
     p_extract.add_argument("--copy", action="store_true", help="Copy result to clipboard")
     p_extract.add_argument("--save-config", action="store_true", help="Persist current settings")
 
     args_list = list(sys.argv[1:] if argv is None else argv)
+
+    if FilesCompleter is not None:  # pragma: no cover - requires argcomplete at runtime
+        try:
+            path_argument.completer = FilesCompleter(directories=True)  # type: ignore[attr-defined]
+            output_argument.completer = FilesCompleter()  # type: ignore[attr-defined]
+        except Exception:
+            pass
+
+    if argv is None and argcomplete is not None:  # pragma: no cover - requires argcomplete at runtime
+        try:
+            from argcomplete.completers import ChoicesCompleter  # type: ignore
+        except Exception:
+            ChoicesCompleter = None  # type: ignore[assignment]
+        else:
+            token_models = ["gpt-4o-mini", "gpt-4o", "gpt-3.5-turbo", "o200k_base"]
+            tokenizer_argument.completer = ChoicesCompleter(token_models)  # type: ignore[attr-defined]
+
+        argcomplete.autocomplete(parser)  # type: ignore[call-arg]
 
     if not args_list:
         _launch_tui()

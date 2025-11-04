@@ -29,11 +29,13 @@ dependencies = [
     "rich>=13.7.0",
     "textual>=0.60",
     "pathspec>=0.11",
-    "tiktoken>=0.7"
+    "tiktoken>=0.7",
+    "argcomplete>=3.1.4"
 ]
 
 [project.scripts]
 proxtract = "proxtract.main:main"
+prx = "proxtract.main:main"
 
 [project.optional-dependencies]
 banner = ["art>=6.0"]
@@ -47,6 +49,7 @@ all = [
     "tiktoken>=0.7",
     "pyperclip>=1.8",
     "tomli>=2.0",
+    "argcomplete>=3.1.4",
 ]
 dev = [
     "build>=1.0.3",

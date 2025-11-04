@@ -31,7 +31,7 @@ class ProxtractApp(App[None]):
         self.title = title or "Proxtract"
 
     async def on_mount(self) -> None:
-        await self.push_screen(MainScreen(self.app_state))
+        self.push_screen(MainScreen(self.app_state))
 
     def action_quit(self) -> None:
         """Persist settings (when available) and exit."""

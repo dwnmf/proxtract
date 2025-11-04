@@ -12,11 +12,11 @@ from textual.containers import Horizontal, Vertical
 from textual.message import Message
 from textual.screen import ModalScreen
 from textual.worker import Worker, WorkerState
-from textual.widgets import Button, Input, Label, ProgressBar
+from textual.widgets import Button, Label, ProgressBar
 
 from ...core import ExtractionError, ExtractionStats
 from ...state import AppState
-from ..widgets import SummaryDisplay
+from ..widgets import CompletionInput, SummaryDisplay
 from .. import STYLES_PATH
 
 
@@ -61,9 +61,9 @@ class ExtractScreen(ModalScreen[ExtractionStats | None]):
                 id="extract-description",
             ),
             Label("Source Directory", id="extract-root-label"),
-            Input(id="extract-root"),
+            CompletionInput(id="extract-root", mode="path"),
             Label("Output File", id="extract-output-label"),
-            Input(id="extract-output"),
+            CompletionInput(id="extract-output", mode="path"),
             Horizontal(
                 Button("Cancel", id="cancel"),
                 Button("Start Extraction", id="start", variant="primary"),
@@ -76,8 +76,8 @@ class ExtractScreen(ModalScreen[ExtractionStats | None]):
         )
 
     def on_mount(self) -> None:
-        root_input = self.query_one("#extract-root", Input)
-        output_input = self.query_one("#extract-output", Input)
+        root_input = self.query_one("#extract-root", CompletionInput)
+        output_input = self.query_one("#extract-output", CompletionInput)
         root_input.value = str(self.app_state.output_path.parent)
         output_input.value = str(self.app_state.output_path)
 
@@ -103,8 +103,8 @@ class ExtractScreen(ModalScreen[ExtractionStats | None]):
             self._begin_extraction()
 
     def _begin_extraction(self) -> None:
-        root = self.query_one("#extract-root", Input).value.strip()
-        output = self.query_one("#extract-output", Input).value.strip()
+        root = self.query_one("#extract-root", CompletionInput).value.strip()
+        output = self.query_one("#extract-output", CompletionInput).value.strip()
 
         if not root or not output:
             self.app.notify("Source and output paths are required.", severity="warning")

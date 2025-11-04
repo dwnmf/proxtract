@@ -91,13 +91,13 @@ class MainScreen(Screen):
         if self.app_state.last_stats is not None:
             self._summary.update_stats(self.app_state.last_stats)
 
-    async def on_list_view_selected(self, event: ListView.Selected) -> None:
+    def on_list_view_selected(self, event: ListView.Selected) -> None:
         if event.control.id == "settings-list":
-            await self._handle_setting_selected(event.item)
+            self._handle_setting_selected(event.item)
         elif event.control.id == "actions-list":
-            await self._handle_action_selected(event.item)
+            self._handle_action_selected(event.item)
 
-    async def _handle_setting_selected(self, item) -> None:
+    def _handle_setting_selected(self, item) -> None:
         if not isinstance(item, SettingItem):
             return
 
@@ -110,21 +110,23 @@ class MainScreen(Screen):
             item.update_content()
             return
 
-        await self.app.push_screen(
+        self.app.push_screen(
             EditSettingScreen(
+                key=spec.attr,
                 label=spec.label,
                 description=spec.description,
+                setting_type=spec.setting_type,
                 initial_value=self._value_to_string(current_value, spec.setting_type),
             ),
             callback=lambda value, attr=attr: self._apply_setting_update(attr, value),
         )
 
-    async def _handle_action_selected(self, item) -> None:
+    def _handle_action_selected(self, item) -> None:
         if not isinstance(item, ActionItem):
             return
 
         if item.action_id == "extract":
-            await self.app.push_screen(
+            self.app.push_screen(
                 ExtractScreen(self.app_state),
                 callback=self._handle_extract_result,
             )

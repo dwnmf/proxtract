@@ -15,10 +15,12 @@ class ActionItem(ListItem):
     ActionItem {
         padding: 1 2;
         height: auto;
+        margin: 0 0 1 0;
     }
 
     ActionItem.-selected {
-        background: $accent 10%;
+        background: $accent 20%;
+        color: $text;
     }
     """
 

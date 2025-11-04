@@ -1,34 +1,58 @@
 Screen#main {
     layout: vertical;
-    padding: 1 2;
-    background: $surface;
+    padding: 2 4;
+    background: $background;
     color: $text;
+}
+
+Header, Footer {
+    background: $primary 85%;
+    color: $text;
+    border: none;
 }
 
 #title {
     text-style: bold;
-    padding-bottom: 1;
-    border-bottom: solid $primary;
+    padding: 1 0;
+    color: $primary;
+    border: none;
 }
 
 #content {
     layout: horizontal;
+    margin-top: 1;
 }
 
 #settings-list, #actions-list {
-    border: solid $accent 20%;
+    border: solid $accent 25%;
+    background: $surface 90%;
+    padding: 1;
     height: 24;
     width: 48;
     scrollbar-size: 1 1;
 }
 
+#settings-list {
+    margin-right: 2;
+}
+
+#settings-header, #actions-header {
+    padding-left: 1;
+    text-style: bold;
+    color: $accent;
+}
+
 #summary-header {
     margin-top: 1;
     text-style: bold;
+    color: $primary;
 }
 
 SummaryDisplay {
     margin-top: 1;
+    border: solid $accent 25%;
+    background: $surface 90%;
+    padding: 1 2;
 }
 
 /* Edit setting modal */
@@ -36,13 +60,19 @@ SummaryDisplay {
     layout: vertical;
     padding: 2;
     width: 60;
-    border: heavy $accent;
-    background: $boost;
+    border: solid $accent 30%;
+    background: $surface 90%;
 }
 
 #edit-buttons {
     layout: horizontal;
     align-horizontal: right;
+    margin-top: 1;
+}
+
+#edit-description,
+#edit-input {
+    margin-top: 1;
 }
 
 /* Extraction modal */
@@ -50,13 +80,23 @@ SummaryDisplay {
     layout: vertical;
     padding: 2;
     width: 80;
-    border: heavy $accent;
-    background: $boost;
+    border: solid $accent 30%;
+    background: $surface 90%;
 }
 
 #extract-buttons {
     layout: horizontal;
     align-horizontal: right;
+    margin-top: 1;
+}
+
+#extract-description,
+#extract-root-label,
+#extract-output-label,
+#extract-progress,
+#extract-status,
+SummaryDisplay#summary {
+    margin-top: 1;
 }
 
 #extract-progress {

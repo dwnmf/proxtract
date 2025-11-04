@@ -27,6 +27,12 @@ Launch the REPL with:
 proxtract
 ```
 
+Or reach for the compact alias:
+
+```bash
+prx
+```
+
 Inside the session use `/help` to see available commands. Typical flow:
 
 1. Adjust defaults with `/settings` if needed.
@@ -34,6 +40,24 @@ Inside the session use `/help` to see available commands. Typical flow:
 3. Exit anytime with `/exit`.
 
 Settings keys accept handy aliases: `/settings max 1024`, `/settings out merged.txt`, `/settings compact off`, `/settings empty on`.
+
+Run a one-off extraction directly from the shell with the short form:
+
+```bash
+prx e path/to/project -o bundle.txt
+```
+
+### Shell Tab Completion
+
+Shell tab-completion for commands, options, and path arguments is available via
+`argcomplete`. After installing Proxtract, enable completion (bash/zsh/fish) with:
+
+```bash
+register-python-argcomplete proxtract prx >> ~/.bashrc  # adapt for your shell
+```
+
+Restart your shell (or source the file) and enjoy tab-completion for both `proxtract`
+and `prx`.
 
 ## Verification
 

@@ -1,0 +1,2901 @@
+# Extracted from: /home/k1/cplusplus
+# Max file size: 500KB
+# Mode: compact
+============================================================
+# Gitignore: on
+
+--- LAB_RAB_CYCLE/THE_FIRST/drobi/main.cpp ---
+#include <iostream>
+#include <string>
+
+int main() {
+    int a, b, c, d;
+    char slash;
+    std::cout << "\n\n\n\n\n" << std::endl;
+    std::cout << "Введите первую дробь: ";
+    std::cin >> a >> slash >> b;
+    std::cout << "Введите вторую дробь: ";
+    std::cin >> c >> slash >> d;
+    std::cout << "Сумма равна " << (a*d + b*c) << "/" << (b*d) << std::endl;
+    return 0;
+}
+
+--- LAB_RAB_CYCLE/THE_FIRST/farenhe/main.cpp ---
+#include <iostream>
+void why ();
+
+int main() {
+    why();
+    return 0;
+}
+
+void why () {
+    float userInput;
+    std::cout << "\n\n" << std::endl;
+    std::cout << "Введите сообщение: ";
+    std::cin >> userInput;
+    float endlu = (userInput * 9/5) + 32;
+    std::cout << "\n\n" << std::endl;
+    std::cout << "Простая программа для конвертация Цельсия в Фаренгейт " << std::endl;
+    std::cout << "Фаренгейт: " << endlu << std::endl;
+}
+
+--- LAB_RAB_CYCLE/THE_FIRST/funts/main.cpp ---
+#include <iostream>
+#include <iomanip>
+
+int main() {
+    float a, b, c;
+    float xa, xb;
+    std::cout << "\n\n\n\n\n" << std::endl;
+    std::cout << "Введите количество фунтов: ";
+    std::cin >> a;
+    std::cout << "Введите количество шиллингов: ";
+    std::cin >> b;
+    std::cout << "Введите количество пенсов: ";
+    std::cin >> c;
+    xb = a*240+b*12+c;
+    xa = xb/240;
+    std::cout << std::fixed << std::setprecision(2);
+    std::cout << "Десятичных фунтов: " << "£" << xa << std::endl;
+    return 0;
+}
+
+
+--- LAB_RAB_CYCLE/THE_FIRST/funts_inverted/main.cpp ---
+#include <iostream>
+#include <iomanip>
+
+int main() {
+    double Poundsnew;
+    std::cout << "\n\n\n\n\n" << std::endl;
+    std::cout << "Введите число десятичных фунтов: ";
+    std::cin >> Poundsnew;
+    int totalOldPence = Poundsnew * 240;
+    int pounds = totalOldPence / 240;
+    int remainder = totalOldPence % 240;
+    int shillings = remainder / 12;
+    int pence = remainder % 12;
+    std::cout << "Эквивалентная сумма в старой форме записи: £" << pounds << "." << shillings << "." << pence << std::endl;
+    return 0;
+}
+
+
+--- LAB_RAB_CYCLE/THE_FIRST/poem/main.cpp ---
+#include <iostream>
+#include <atomic>
+int main() {
+std::cout << ""<< std::endl;
+std::cout << ""<< std::endl;
+std::cout <<        "Переживи всех.\n"
+                    "Переживи вновь,\n"
+                    "словно они — снег,\n"
+                    "пляшущий снег снов.\n"
+                    "Переживи углы.\n"
+                    "Переживи углом.\n"
+                    "Перевяжи узлы\n"
+                    "между добром и злом.\n"
+                    "Но переживи миг.\n"
+                    "И переживи век.\n"
+                    "Переживи крик.\n"
+                    "Переживи смех.\n"
+                    "Переживи стих.\n"
+                    "Переживи всех." << std::endl;
+std::cout << ""<< std::endl;
+std::cout << ""<< std::endl;
+return 0;
+}
+
+--- LAB_RAB_CYCLE/lab_2/1/main.cpp ---
+#include <format>
+#include <iostream>
+#include <string>
+
+using namespace std;
+
+int main() {
+    cout << "Введите длину пирамиды:\n";
+    int maxRows;
+    cin >> maxRows;
+    int width = maxRows * 2 - 1;
+    for (int i = 1; i <= maxRows; i++) {
+        string line(i * 2 - 1, 'X');
+        cout << format("{:^{}}\n", line, width);
+    }
+    
+    return 0;
+}
+
+--- LAB_RAB_CYCLE/lab_2/1/yap.cpp ---
+#include <iostream>
+#include <string>
+#include <format>
+
+using namespace std;
+
+int main() {
+    cout << "VVedite dliny piramiduy:";
+    int maxrows;
+    cin >> maxrows;
+    int width = maxrows*2-1;
+    for (int i = 1; i <= maxrows; i++) {
+        string text(i*2-1, 'X');
+        cout << format("{:^{}}\n", text, width);
+    }
+
+return 0;
+}
+
+--- LAB_RAB_CYCLE/lab_2/2/main.cpp ---
+#include <iostream>
+using namespace std;
+long long int numberito{1};
+void factorial();
+
+int main() {
+    while (true && numberito !=0) {
+    factorial();
+    }
+    return 0;
+}
+
+void factorial() {
+    double factorialn;
+    long long int result=1;
+    cout << "Введите число:";
+    cin >> numberito;
+    while (numberito !=0 && result == 1) {
+    for (int i{1}; i <= numberito; i++) {
+        result = i * result;
+    }
+    cout << "Факториал числа:" << numberito << endl;
+    cout << "Равен: " << result << endl;
+    }
+}
+
+--- LAB_RAB_CYCLE/lab_2/3/main.cpp ---
+#include <iostream>
+using namespace std;
+void factorial();
+
+int main() {
+    factorial();
+    return 0;
+}
+
+void factorial() {
+    double sum{1};
+    double years{1};
+    double percentyear{1};
+    cout << "Введите сумму вклада:";
+    cin >> sum;
+    cout << "Введите кол-во лет:";
+    cin >> years;
+    cout << "Введите процентную ставку:";
+    cin >> percentyear;
+    double realpercent=percentyear/100;
+    double result = sum;
+if (years >0 && percentyear > 0 && sum > 0) {
+    for (int i{1}; i <=years; i++) {
+        result = result + result*realpercent;
+    }
+    cout << "Через " << years << " лет вы получите: " << result << endl;
+}
+else {
+    cout << "Неверные Данные";
+}
+}
+
+--- LAB_RAB_CYCLE/lab_2/4/main.cpp ---
+#include <iostream>
+using namespace std;
+void ipotek();
+
+int main() {
+    ipotek();
+    return 0;
+}
+
+void ipotek() {
+    double ipoteka{1};
+    double vznoz{1};
+    double years{1};
+    double percentyear{1};
+    cout << "Введите сумму ипотеки:";
+    cin >> ipoteka;
+    cout << "Введите сумму начального взноса:";
+    cin >> vznoz;
+    cout << "Введите кол-во лет:";
+    cin >> years;
+    cout << "Введите процентную ставку:";
+    cin >> percentyear;
+    double realpercent=percentyear/100;
+    double result = ipoteka-vznoz;
+    double vuplata{0};
+    double total_payout{0};
+    double partofdolg = (ipoteka - vznoz) / years;
+if (years >0 && percentyear > 0 && ipoteka > 0) {
+    for (int i{1}; i <=years; i++) {
+        double percentsperyear = result * realpercent;
+        vuplata = percentsperyear + partofdolg;
+        total_payout = total_payout + vuplata;
+        result = result - partofdolg;
+        cout << "Платеж за " << i << " год: " << vuplata << endl;
+    }
+    cout << "Через " << years << " лет вы выплатите: " << total_payout << endl;
+}
+else {
+    cout << "Неверные Данные";
+}
+}
+
+--- LAB_RAB_CYCLE/lab_2/5/main.cpp ---
+#include <iostream>
+using namespace std;
+void mainfunc();
+
+int main () {
+    mainfunc();
+    return 0;
+}
+
+void mainfunc() {
+    int fund{1};
+    int shilling{1};
+    int pens{1};
+    int fund1{1};
+    int shilling1{1};
+    int pens1{1};
+    int fund2{1};
+    int shilling2{1};
+    int pens2{1};
+    cout << "Введите первую сумму £:(Пример ввода: 5 10 6) " << endl;
+    cin >> fund1 >> shilling1 >> pens1;
+    cout << "Введите вторую сумму £:(Пример ввода: 4 10 3) " << endl;
+    cin >> fund2 >> shilling2 >> pens2;
+    fund = fund1 + fund2;
+    shilling = shilling1 + shilling2;
+    pens = pens1 + pens2;
+    while(pens >= 12 || shilling >= 20) {
+    if (shilling >=20) {
+        int convertico=shilling/20;
+        int shillingplus= shilling % 20;
+        fund = fund + convertico;
+        shilling = shillingplus;
+    }
+    if (pens>=12) {
+        int convertshillplus=pens/12;
+        int pensplus= pens % 12;
+        shilling = shilling + convertshillplus;
+        pens = pensplus;
+    }
+    if (shilling >=20) {
+        int convertico=shilling/20;
+        int shillingplus= shilling % 20;
+        fund = fund + convertico;
+        shilling = shillingplus;
+    }
+    }
+    cout << fund << "|" << shilling << "|" << pens << "|" << endl;
+}
+
+--- LAB_RAB_CYCLE/lab_3/1/main.cpp ---
+#include <iostream>
+#include <vector>
+using namespace std;
+void inputdata();
+struct employee {
+    int nomer{0};
+    float salary{0};
+};
+
+int main() {
+    inputdata();
+    return 0;
+}
+
+void inputdata() {
+    int kolvo{1};
+    cout << "Введите кол-во сотрудников: ";
+    cin >> kolvo;
+    vector<employee> data(kolvo);
+    for (int i{0}; i < kolvo; i++) {
+        cout << "\nСотрудник " << (i+1) << "" << endl;
+        cout << "Введите номер сотрудника: ";
+        cin >> data[i].nomer;
+        cout << "Введите зарплату: ";
+        cin >> data[i].salary;
+    }
+    for (int i{0}; i < kolvo; i++) { 
+        cout << "Сотрудник " << (i+1) << ": номер = " << data[i].nomer << ", зарплата = " << data[i].salary << endl;
+    }
+}
+
+--- LAB_RAB_CYCLE/lab_3/2/main.cpp ---
+#include <iostream>
+#include <string>
+using namespace std;
+void emp();
+enum etype {
+    laborer,
+    secretary,
+    manager,
+    accountant,
+    executive,
+    researcher
+};
+
+int main() {
+    emp();
+    return 0;
+}
+
+void emp() {
+char choice;
+etype employee;
+cout << "Введите первую букву должности\n";
+cout << "(laborer, secretary, manager, accountant, executive, researcher): ";
+cin >> choice;
+
+switch(choice) {
+    case 'l':
+        employee = laborer;
+        break;
+    case 's':
+        employee = secretary;
+        break;
+    case 'm':
+        employee = manager;
+        break;
+    case 'a':
+        employee = accountant;
+        break;
+    case 'e':
+        employee = executive;
+        break;
+    case 'r':
+        employee = researcher;
+        break;
+    default:
+        cout << "Неверный ввод!\n";
+}
+cout << "Полное название должности: ";
+
+switch(employee) {
+    case laborer:
+        cout << "laborer";
+        break;
+    case secretary:
+        cout << "secretary";
+        break;
+    case manager:
+        cout << "manager";
+        break;
+    case accountant:
+        cout << "accountant";
+        break;
+    case executive:
+        cout << "executive";
+        break;
+    case researcher:
+        cout << "researcher";
+        break;
+}
+
+cout << endl;
+}
+
+--- LAB_RAB_CYCLE/lab_3/3/1example.cpp ---
+#include <iostream>
+#include <string>
+
+int main() {
+    int a, b, c, d;
+    char slash;
+    std::cout << "\n\n\n\n\n" << std::endl;
+    std::cout << "Введите первую дробь: ";
+    std::cin >> a >> slash >> b;
+    std::cout << "Введите вторую дробь: ";
+    std::cin >> c >> slash >> d;
+    std::cout << "Сумма равна " << (a*d + b*c) << "/" << (b*d) << std::endl;
+    return 0;
+}
+
+--- LAB_RAB_CYCLE/lab_3/3/example.cpp ---
+#include <iostream>
+#include <vector>
+#include <cstdlib>
+using namespace std;
+void inputdata();
+struct times{
+    int hours{0};
+    int minutes{0};
+    int seconds{0};
+};
+
+int main() {
+    inputdata();
+    return 0;
+}
+
+void inputdata() {
+    char razd;
+    vector<times> data{};
+    times t1;
+    times t2;
+    times result;
+    cout << "Введите кол-во часов, минут, секунд в следующем формате (XX:XX:XX): ";
+    cin >> t1.hours >> razd >> t1.minutes >> razd >> t1.seconds;
+    if ( razd != ':') {
+        exit(EXIT_FAILURE);
+    }
+    cout << "Введите кол-во часов, минут, секунд в следующем формате (XX:XX:XX): ";
+    cin >> t2.hours >> razd >> t2.minutes >> razd >> t2.seconds;
+    if ( razd != ':') {
+        exit(EXIT_FAILURE);
+    }
+    cout << "Будет рассчитана сумма переменных\n";
+    data.push_back(t1);
+    data.push_back(t2);
+    result.hours=t1.hours+t2.hours;
+    result.minutes=t1.minutes+t2.minutes;
+    result.seconds=t1.seconds+t2.seconds;
+    while (result.seconds >= 60) {
+        result.seconds = result.seconds - 60;
+        result.minutes = result.minutes + 1;
+    }
+    while (result.minutes >= 60) {
+        result.minutes = result.minutes- 60;
+        result.hours = result.hours + 1;
+    }
+    data.push_back(result);
+    cout << result.hours << ":" << result.minutes << ":" << result.seconds;
+}
+
+--- LAB_RAB_CYCLE/lab_3/3/main.cpp ---
+#include <iostream>
+#include <string>
+#include <vector>
+using namespace std;
+
+struct fraction{
+    long long int chis{0};
+    long long int znam{0};
+};
+
+int main() {
+    int a, b, c, d;
+    fraction f1;
+    char slash;
+    std::cout << "\n\n\n\n\n" << std::endl;
+    std::cout << "Введите первую дробь: ";
+    std::cin >> a >> slash >> b;
+    std::cout << "Введите вторую дробь: ";
+    std::cin >> c >> slash >> d;
+    f1.chis = a * d + c * b;
+    f1.znam = b * d;
+    std::cout << "Сумма равна " << f1.chis << "/" << f1.znam << std::endl;
+    return 0;
+}
+
+--- LAB_RAB_CYCLE/lab_3/4/main.cpp ---
+#include <iostream>
+#include <vector>
+using namespace std;
+void inputdata();
+struct times{
+    int hours{0};
+    int minutes{0};
+    int seconds{0};
+};
+
+int main() {
+    inputdata();
+    return 0;
+}
+
+void inputdata() {
+    int userinput{0};
+    vector<times> data{};
+    times t1;
+    cout << "Введите кол-во часов: ";
+    cin >> t1.hours;
+    cout << "Введите кол-во минут: ";
+    cin >> t1.minutes;
+    cout << "Введите кол-во секунд: ";
+    cin >> t1.seconds;
+    cout << "Рассчитать общее кол-во секунд? (Форматы ответов: Да(1) Нет(0))\n";
+    cin >> userinput;
+    data.push_back(t1);
+    long totalsecs = t1.hours*3600 + t1.minutes*60 + t1.seconds;
+    if (userinput == 1) {
+        cout << "Общее кол-во секунд составляет: " << totalsecs << endl;
+    }
+    else {
+        cout << "Работы программы завершена принудительно" << endl;
+    }
+}
+
+--- LAB_RAB_CYCLE/lab_3/5/main.cpp ---
+#include <iostream>
+#include <vector>
+#include <cstdlib>
+using namespace std;
+void inputdata();
+struct times{
+    int hours{0};
+    int minutes{0};
+    int seconds{0};
+};
+
+int main() {
+    inputdata();
+    return 0;
+}
+
+void inputdata() {
+    char razd;
+    vector<times> data{};
+    times t1;
+    times t2;
+    times result;
+    cout << "Введите кол-во часов, минут, секунд в следующем формате (XX:XX:XX): ";
+    cin >> t1.hours >> razd >> t1.minutes >> razd >> t1.seconds;
+    if ( razd != ':') {
+        exit(EXIT_FAILURE);
+    }
+    cout << "Введите кол-во часов, минут, секунд в следующем формате (XX:XX:XX): ";
+    cin >> t2.hours >> razd >> t2.minutes >> razd >> t2.seconds;
+    if ( razd != ':') {
+        exit(EXIT_FAILURE);
+    }
+    cout << "Будет рассчитана сумма переменных\n";
+    data.push_back(t1);
+    data.push_back(t2);
+    result.hours=t1.hours+t2.hours;
+    result.minutes=t1.minutes+t2.minutes;
+    result.seconds=t1.seconds+t2.seconds;
+    while (result.seconds >= 60) {
+        result.seconds = result.seconds - 60;
+        result.minutes = result.minutes + 1;
+    }
+    while (result.minutes >= 60) {
+        result.minutes = result.minutes- 60;
+        result.hours = result.hours + 1;
+    }
+    data.push_back(result);
+    cout << result.hours << ":" << result.minutes << ":" << result.seconds;
+}
+
+--- colors/main.cpp ---
+#include <algorithm>
+#include <array>
+#include <atomic>
+#include <chrono>
+#include <cmath>
+#include <csignal>
+#include <iostream>
+#include <random>
+#include <string>
+#include <thread>
+#include <utility>
+#include <vector>
+#ifdef _WIN32
+#include <windows.h>
+#endif
+
+namespace {
+constexpr int WIDTH = 96;
+constexpr int HEIGHT = 28;
+constexpr int WALKWAY_START = 8;
+constexpr int WALKWAY_END = WIDTH - 8;
+constexpr int WALL_BOTTOM = HEIGHT - 4;
+constexpr int WALL_TOP = WALL_BOTTOM - 4;
+constexpr int CANNON_BASE_Y = WALL_TOP - 2;
+
+enum class ParticleType { Fire, Spark, Smoke };
+
+struct Cell {
+    char ch = ' ';
+    int fg = -1;
+    int bg = -1;
+};
+
+struct Particle {
+    double x;
+    double y;
+    double dx;
+    double dy;
+    double life;
+    double maxLife;
+    int colorStart;
+    int colorEnd;
+    ParticleType type;
+    double gravity;
+};
+
+struct Cannon {
+    double anchorX;
+    double anchorY;
+    double muzzleOffsetX;
+    double muzzleOffsetY;
+    double angle;
+    double recoil = 0.0;
+    double recoilVelocity = 0.0;
+};
+
+struct Vec2 {
+    double x;
+    double y;
+};
+
+std::atomic<bool> gRunning{true};
+
+void handleSignal(int) {
+    gRunning = false;
+}
+
+bool enableAnsiColors() {
+#ifdef _WIN32
+    HANDLE out = GetStdHandle(STD_OUTPUT_HANDLE);
+    if (out == INVALID_HANDLE_VALUE) {
+        return false;
+    }
+    DWORD mode = 0;
+    if (!GetConsoleMode(out, &mode)) {
+        return false;
+    }
+    if ((mode & ENABLE_VIRTUAL_TERMINAL_PROCESSING) == 0) {
+        if (!SetConsoleMode(out, mode | ENABLE_VIRTUAL_TERMINAL_PROCESSING)) {
+            return false;
+        }
+    }
+#endif
+    return true;
+}
+
+std::string makeAnsi(int fg, int bg) {
+    if (fg < 0 && bg < 0) {
+        return "\033[0m";
+    }
+    std::string seq = "\033[";
+    bool first = true;
+    if (fg >= 0) {
+        seq += "38;5;";
+        seq += std::to_string(fg);
+        first = false;
+    }
+    if (bg >= 0) {
+        if (!first) {
+            seq += ';';
+        }
+        seq += "48;5;";
+        seq += std::to_string(bg);
+    }
+    seq += 'm';
+    return seq;
+}
+
+std::vector<std::vector<Cell>> createBaseScene() {
+    std::vector<std::vector<Cell>> grid(HEIGHT, std::vector<Cell>(WIDTH));
+    const std::array<int, 6> skyGradient = {17, 18, 19, 19, 18, 17};
+    const int skyHeight = HEIGHT - 6;
+    for (int y = 0; y < skyHeight; ++y) {
+        int idx = static_cast<int>(static_cast<double>(y) / std::max(1, skyHeight - 1) * (static_cast<int>(skyGradient.size()) - 1));
+        for (int x = 0; x < WIDTH; ++x) {
+            grid[y][x].ch = ' ';
+            grid[y][x].bg = skyGradient[idx];
+        }
+    }
+
+    for (int x = 0; x < WIDTH; ++x) {
+        grid[HEIGHT - 1][x] = {'~', 25, -1};
+        grid[HEIGHT - 2][x] = {'~', 24, -1};
+    }
+
+    for (int y = WALL_TOP + 1; y <= WALL_BOTTOM; ++y) {
+        for (int x = WALKWAY_START; x <= WALKWAY_END; ++x) {
+            char block = (y == WALL_BOTTOM) ? '_' : '#';
+            grid[y][x] = {block, 94, -1};
+        }
+    }
+
+    for (int x = WALKWAY_START; x <= WALKWAY_END; ++x) {
+        grid[WALL_TOP][x] = {'=', 137, -1};
+    }
+
+    for (int block = 0; block * 6 < (WALKWAY_END - WALKWAY_START); ++block) {
+        int baseX = WALKWAY_START + block * 6;
+        for (int cx = baseX; cx < baseX + 3 && cx <= WALKWAY_END; ++cx) {
+            int y = WALL_TOP - 1;
+            if (y >= 0) {
+                grid[y][cx] = {'#', 137, -1};
+            }
+        }
+    }
+
+    for (int y = WALL_TOP - 3; y <= WALL_BOTTOM; ++y) {
+        for (int x = WALKWAY_START - 3; x <= WALKWAY_START - 1; ++x) {
+            if (x >= 0) {
+                grid[y][x] = {'#', 94, -1};
+            }
+        }
+        for (int x = WALKWAY_END + 1; x <= WALKWAY_END + 3 && x < WIDTH; ++x) {
+            grid[y][x] = {'#', 94, -1};
+        }
+    }
+
+    const int poleX = WALKWAY_START - 1;
+    for (int y = WALL_TOP - 6; y <= WALL_TOP - 1; ++y) {
+        if (y >= 0 && poleX >= 0 && poleX < WIDTH) {
+            grid[y][poleX] = {'|', 250, -1};
+        }
+    }
+    if (WALL_TOP - 6 >= 0 && poleX + 1 < WIDTH) {
+        grid[WALL_TOP - 6][poleX + 1] = {'/', 196, -1};
+    }
+    if (WALL_TOP - 5 >= 0 && poleX + 2 < WIDTH) {
+        grid[WALL_TOP - 5][poleX + 2] = {'-', 208, -1};
+    }
+    if (WALL_TOP - 4 >= 0 && poleX + 1 < WIDTH) {
+        grid[WALL_TOP - 4][poleX + 1] = {'\\', 220, -1};
+    }
+
+    const std::array<std::pair<int, int>, 16> stars = {{
+        {8, 3}, {22, 5}, {35, 2}, {48, 4}, {60, 6}, {75, 3}, {90, 7}, {15, 8},
+        {28, 10}, {42, 7}, {54, 9}, {67, 5}, {81, 8}, {33, 11}, {57, 12}, {85, 9}
+    }};
+    for (const auto& star : stars) {
+        int x = star.first;
+        int y = star.second;
+        if (x >= 0 && x < WIDTH && y >= 0 && y < HEIGHT) {
+            grid[y][x] = {'*', 229, -1};
+        }
+    }
+
+    return grid;
+}
+
+void drawCannons(std::vector<std::vector<Cell>>& grid, const std::vector<Cannon>& cannons) {
+    static const std::vector<std::string> sprite = {
+        "    __ ",
+        "__/__)==>",
+        "  /_/   "
+    };
+    for (const auto& cannon : cannons) {
+        for (std::size_t row = 0; row < sprite.size(); ++row) {
+            const auto& line = sprite[row];
+            for (std::size_t col = 0; col < line.size(); ++col) {
+                char ch = line[col];
+                if (ch == ' ') {
+                    continue;
+                }
+                double fx = cannon.anchorX + static_cast<double>(col) - cannon.recoil;
+                int x = static_cast<int>(std::round(fx));
+                int y = static_cast<int>(std::round(cannon.anchorY + static_cast<double>(row)));
+                if (x < 0 || x >= WIDTH || y < 0 || y >= HEIGHT) {
+                    continue;
+                }
+                int color = 247;
+                if (ch == '_' || ch == '/') {
+                    color = 241;
+                } else if (ch == ')') {
+                    color = 236;
+                } else if (ch == '=') {
+                    color = 220;
+                } else if (ch == '>') {
+                    color = 214;
+                }
+                grid[y][x] = {ch, color, -1};
+            }
+        }
+    }
+}
+
+Vec2 muzzlePosition(const Cannon& cannon) {
+    return Vec2{
+        cannon.anchorX + cannon.muzzleOffsetX - cannon.recoil,
+        cannon.anchorY + cannon.muzzleOffsetY
+    };
+}
+
+void spawnVolley(std::vector<Particle>& particles, Cannon& cannon, std::mt19937& rng) {
+    static const std::array<int, 8> firePalette = {196, 202, 208, 214, 220, 51, 45, 201};
+    std::uniform_real_distribution<double> spread(-0.22, 0.22);
+    std::uniform_real_distribution<double> fireSpeed(1.3, 1.9);
+    std::uniform_real_distribution<double> sparkSpeed(1.6, 2.4);
+    std::uniform_real_distribution<double> smokeSpeed(0.2, 0.6);
+    std::uniform_int_distribution<int> colorPick(0, static_cast<int>(firePalette.size()) - 1);
+
+    Vec2 muzzle = muzzlePosition(cannon);
+    cannon.recoilVelocity += 0.9;
+
+    for (int i = 0; i < 34; ++i) {
+        double angle = cannon.angle + spread(rng);
+        double speed = fireSpeed(rng);
+        double dx = std::cos(angle) * speed;
+        double dy = std::sin(angle) * speed;
+        int idx = colorPick(rng);
+        int startColor = firePalette[idx];
+        int endColor = firePalette[(idx + 2) % firePalette.size()];
+        particles.push_back(Particle{muzzle.x, muzzle.y, dx, dy, 36.0, 36.0, startColor, endColor, ParticleType::Fire, 0.05});
+    }
+    for (int i = 0; i < 12; ++i) {
+        double angle = cannon.angle + spread(rng) * 0.4;
+        double speed = sparkSpeed(rng);
+        double dx = std::cos(angle) * speed;
+        double dy = std::sin(angle) * speed;
+        int startColor = (i % 2 == 0) ? 229 : 226;
+        int endColor = 220;
+        particles.push_back(Particle{muzzle.x, muzzle.y, dx, dy, 22.0, 22.0, startColor, endColor, ParticleType::Spark, 0.06});
+    }
+    for (int i = 0; i < 16; ++i) {
+        double angle = cannon.angle + spread(rng) * 0.5;
+        double speed = smokeSpeed(rng);
+        double dx = std::cos(angle) * speed * 0.4;
+        double dy = std::sin(angle) * speed * 0.4 - 0.1;
+        particles.push_back(Particle{muzzle.x - 0.5, muzzle.y, dx, dy, 48.0, 48.0, 250, 244, ParticleType::Smoke, 0.012});
+    }
+}
+
+void updateCannons(std::vector<Cannon>& cannons) {
+    for (auto& cannon : cannons) {
+        if (cannon.recoilVelocity > 0.0 || cannon.recoil > 0.0) {
+            cannon.recoil += cannon.recoilVelocity;
+            cannon.recoilVelocity *= 0.68;
+            cannon.recoil -= 0.15;
+            if (cannon.recoil < 0.0) {
+                cannon.recoil = 0.0;
+            }
+            if (cannon.recoilVelocity < 0.02) {
+                cannon.recoilVelocity = 0.0;
+            }
+        }
+    }
+}
+
+void updateParticles(std::vector<Particle>& particles) {
+    for (auto& p : particles) {
+        p.x += p.dx;
+        p.y += p.dy;
+        p.dy += p.gravity;
+        p.life -= 1.0;
+    }
+    particles.erase(std::remove_if(particles.begin(), particles.end(), [](const Particle& p) {
+        return p.life <= 0.0 || p.y >= HEIGHT || p.x < -4.0 || p.x >= WIDTH + 4.0;
+    }), particles.end());
+}
+
+int particleColor(const Particle& p) {
+    double ratio = p.life / p.maxLife;
+    switch (p.type) {
+        case ParticleType::Fire:
+            return (ratio > 0.45) ? p.colorStart : p.colorEnd;
+        case ParticleType::Spark:
+            return (ratio > 0.55) ? p.colorStart : p.colorEnd;
+        case ParticleType::Smoke:
+            return (ratio > 0.5) ? p.colorStart : p.colorEnd;
+    }
+    return p.colorStart;
+}
+
+char particleGlyph(const Particle& p) {
+    double ratio = p.life / p.maxLife;
+    if (p.type == ParticleType::Fire) {
+        if (ratio > 0.55) {
+            return '*';
+        }
+        return (ratio > 0.3) ? '+' : '.';
+    }
+    if (p.type == ParticleType::Spark) {
+        return (ratio > 0.5) ? '\'' : '.';
+    }
+    if (p.type == ParticleType::Smoke) {
+        return (ratio > 0.5) ? '~' : '.';
+    }
+    return '.';
+}
+
+void overlayParticles(std::vector<std::vector<Cell>>& grid, const std::vector<Particle>& particles) {
+    for (const auto& p : particles) {
+        int x = static_cast<int>(std::round(p.x));
+        int y = static_cast<int>(std::round(p.y));
+        if (x < 0 || x >= WIDTH || y < 0 || y >= HEIGHT) {
+            continue;
+        }
+        const char glyph = particleGlyph(p);
+        const int color = particleColor(p);
+        if (p.type == ParticleType::Smoke) {
+            if (grid[y][x].ch == ' ' || grid[y][x].ch == '~' || grid[y][x].ch == '.') {
+                grid[y][x] = {glyph, color, -1};
+            }
+        } else {
+            grid[y][x] = {glyph, color, -1};
+        }
+    }
+}
+
+void renderFrame(const std::vector<std::vector<Cell>>& grid) {
+    std::cout << "\033[H";
+    int currentFg = -2;
+    int currentBg = -2;
+    for (int y = 0; y < HEIGHT; ++y) {
+        for (int x = 0; x < WIDTH; ++x) {
+            const Cell& cell = grid[y][x];
+            int fg = cell.fg;
+            int bg = cell.bg;
+            if (fg != currentFg || bg != currentBg) {
+                if (fg < 0 && bg < 0) {
+                    std::cout << "\033[0m";
+                } else {
+                    std::cout << makeAnsi(fg, bg);
+                }
+                currentFg = fg;
+                currentBg = bg;
+            }
+            std::cout << cell.ch;
+        }
+        if (y != HEIGHT - 1) {
+            std::cout << "\033[0m\n";
+            currentFg = -1;
+            currentBg = -1;
+        }
+    }
+    std::cout << "\033[0m" << std::flush;
+}
+
+struct TerminalRestorer {
+    ~TerminalRestorer() {
+        std::cout << "\033[0m\033[?25h" << std::flush;
+    }
+};
+
+} // namespace
+
+int main() {
+    std::ios::sync_with_stdio(false);
+    enableAnsiColors();
+    std::signal(SIGINT, handleSignal);
+    std::signal(SIGTERM, handleSignal);
+
+    std::cout << "\033[2J\033[H\033[?25l";
+    TerminalRestorer restorer;
+
+    const auto baseScene = createBaseScene();
+    std::vector<Cannon> cannons = {
+        {static_cast<double>(WALKWAY_START + 4), static_cast<double>(CANNON_BASE_Y), 8.0, 1.0, -0.20},
+        {static_cast<double>(WALKWAY_START + 22), static_cast<double>(CANNON_BASE_Y), 8.0, 1.0, -0.17},
+        {static_cast<double>(WALKWAY_START + 40), static_cast<double>(CANNON_BASE_Y), 8.0, 1.0, -0.14},
+        {static_cast<double>(WALKWAY_START + 58), static_cast<double>(CANNON_BASE_Y), 8.0, 1.0, -0.11},
+        {static_cast<double>(WALKWAY_START + 76), static_cast<double>(CANNON_BASE_Y), 8.0, 1.0, -0.09}
+    };
+
+    std::vector<Particle> particles;
+    particles.reserve(1024);
+
+    std::mt19937 rng(static_cast<unsigned int>(std::chrono::steady_clock::now().time_since_epoch().count()));
+    std::uniform_int_distribution<int> cadenceOffset(12, 28);
+
+    int volleyTimer = 0;
+
+    while (gRunning.load()) {
+        bool fire = false;
+        if (volleyTimer <= 0) {
+            fire = true;
+            volleyTimer = 90 + cadenceOffset(rng);
+        }
+        --volleyTimer;
+
+        if (fire) {
+            for (auto& cannon : cannons) {
+                spawnVolley(particles, cannon, rng);
+            }
+        }
+
+        updateCannons(cannons);
+        updateParticles(particles);
+
+        auto frame = baseScene;
+        drawCannons(frame, cannons);
+        overlayParticles(frame, particles);
+        renderFrame(frame);
+
+        std::this_thread::sleep_for(std::chrono::milliseconds(45));
+    }
+
+    std::cout << "\033[0m\033[2J\033[H";
+    return 0;
+}
+
+
+--- cycles_first/cycles.cpp ---
+#include <iostream>
+#include <vector>
+
+void babax(double& husband, double& wife, double& lebomb) {
+    husband = 5 + 3;
+    wife = husband + 10;
+    lebomb = wife + 5;
+}
+
+void drawSpider1() {
+    std::cout << "     /\\_/\\     " << std::endl;
+    std::cout << "    ( o.o )    " << std::endl;
+    std::cout << "     > ^ <     " << std::endl;
+    std::cout << "    /  ~  \\    " << std::endl;
+    std::cout << "   /        \\   " << std::endl;
+    std::cout << "  |          |  " << std::endl;
+    std::cout << "   \\________/   " << std::endl;
+}
+
+void drawSpider2() {
+    std::cout << "     /\\_/\\     " << std::endl;
+    std::cout << "    ( o.o )    " << std::endl;
+    std::cout << "     > ^ <     " << std::endl;
+    std::cout << "    \\  ~  /    " << std::endl;
+    std::cout << "   \\        /   " << std::endl;
+    std::cout << "  |          |  " << std::endl;
+    std::cout << "   \\________/   " << std::endl;
+}
+
+void vectorCycle() {
+    std::vector<int> numbers = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10};
+
+    for (int i = 0; i < numbers.size(); i++) {
+        std::cout << "Iteration " << i + 1 << ": " << numbers[i] << std::endl;
+
+        double husband = numbers[i] + 2;
+        double wife = husband + 10;
+
+        if (husband == 8) {
+            std::cout << "Husband = 8! Drawing spider:" << std::endl;
+            drawSpider1();
+        }
+
+        if (wife == husband + 10) {
+            std::cout << "Wife = husband + 10! Drawing spider (position 2):" << std::endl;
+            drawSpider2();
+        }
+
+        std::cout << std::endl;
+    }
+}
+
+int thesecond() {
+    double husband, wife, lebomb;
+    babax(husband, wife, lebomb);
+    // Fixed the infinite loop - assignment should be comparison
+    if (husband == wife - 10) {
+        std::cout << lebomb;
+    }
+    return 0;
+}
+
+int main() {
+    double husband, wife, lebomb;
+    babax(husband, wife, lebomb);
+    std::cout << "And Here you dine: " << wife << std::endl;
+    std::cout << "But they are not strong anymore: " << lebomb << std::endl;
+
+    std::cout << "\n=== Vector Cycle with Spider Drawings ===" << std::endl;
+    vectorCycle();
+
+    thesecond();
+    return 0;
+}
+
+--- cycles_first/main.cpp ---
+#include <iostream>
+
+void printPi() {
+    double pi = 3.14159;
+    double nigger=2025;
+    double biden=nigger*pi;
+    
+    std::cout << "Pi is approximately: " << pi << std::endl;
+    std::cout << "PROBEL: " << nigger << std::endl;
+    std::cout << "AND OF COURSE HERE IS THE BIDEN: " << biden << std::endl;
+}
+
+void calculateAndPrint() { 
+    printPi(); 
+    double result = 1977;
+    std::cout << "Pi multiplied by 2: " << result << std::endl;
+}
+
+int main() {
+    calculateAndPrint();
+    return 0;
+}
+
+--- determine/main.cpp ---
+#include <algorithm>
+#include <iostream>
+#include <string>
+#include <vector>
+
+double similarityPercent(std::string a, std::string b) {
+    std::transform(a.begin(), a.end(), a.begin(), ::tolower);
+    std::transform(b.begin(), b.end(), b.begin(), ::tolower);
+
+    const std::size_t rows = a.size() + 1;
+    const std::size_t cols = b.size() + 1;
+    std::vector<std::size_t> prev(cols), curr(cols);
+
+    for (std::size_t j = 0; j < cols; ++j) prev[j] = j;
+
+    for (std::size_t i = 1; i < rows; ++i) {
+        curr[0] = i;
+        for (std::size_t j = 1; j < cols; ++j) {
+            std::size_t cost = (a[i - 1] == b[j - 1]) ? 0u : 1u;
+            curr[j] = std::min({ prev[j] + 1,           // deletion
+                                 curr[j - 1] + 1,        // insertion
+                                 prev[j - 1] + cost });  // substitution
+        }
+        std::swap(prev, curr);
+    }
+
+    std::size_t distance = prev.back();
+    std::size_t maxLen = std::max(a.size(), b.size());
+    if (maxLen == 0) return 100.0;
+    return (1.0 - static_cast<double>(distance) / maxLen) * 100.0;
+}
+
+int main() {
+    const std::string reference = "and here you dine";
+    std::string line;
+
+    std::cout << "Type a phrase (empty line to exit):\n";
+    while (std::getline(std::cin, line) && !line.empty()) {
+        double percent = similarityPercent(line, reference);
+        std::cout << "Similarity: " << percent << "% — ";
+
+        if (percent >= 20.0 && percent < 30.0) {
+            std::cout << "Weak resemblance (20-30%)\n";
+        } else if (percent >= 30.0 && percent < 50.0) {
+            std::cout << "Moderate resemblance (30-50%)\n";
+        } else if (percent >= 50.0 && percent < 70.0) {
+            std::cout << "Strong resemblance (50-70%)\n";
+        } else {
+            std::cout << "Outside tracked ranges\n";
+        }
+    }
+}
+
+
+--- if_else_input/main.cpp ---
+#include <iostream>
+#include <string>
+#include <windows.h>
+#include <iomanip>
+
+// Объявление (прототипы) функций, которые мы будем использовать.
+// Это позволяет функции main() "знать" о их существовании до того, как они будут определены.
+void sayHello();
+void sayGoodbye();
+void dayzero_zero();
+void handleUnknownCommand(std::string command);
+
+int main() {
+    SetConsoleCP(CP_UTF8);
+    SetConsoleOutputCP(CP_UTF8);
+    std::string userInput; // Переменная для хранения ввода пользователя
+
+    std::cout << "Простая программа-обработчик команд." << std::endl;
+    std::cout << "Доступные команды: 'привет', 'пока', 'день0'" << std::endl;
+    std::cout << "Введите команду: ";
+
+    // Считываем всю строку, которую введет пользователь
+    std::getline(std::cin, userInput);
+
+    // Обрабатываем ввод пользователя с помощью условных операторов
+    if (userInput == "hi") {
+        // Если пользователь ввел "привет", вызываем функцию sayHello
+        sayHello();
+    } else if (userInput == "bye") {
+        // Если пользователь ввел "пока", вызываем функцию sayGoodbye
+        sayGoodbye();
+    } else if (userInput == "day0") {
+        // Специальная команда для особого сообщения
+        dayzero_zero();
+    }
+    else {
+        // Если ввод не соответствует ни одной из известных команд,
+        // вызываем функцию для обработки неизвестной команды
+        handleUnknownCommand(userInput);
+    }
+
+    return 0; // Сигнал операционной системе об успешном завершении программы
+}
+
+/**
+ * @brief Функция, которая выводит приветствие.
+ */
+void sayHello() {
+    std::cout << "Привет, пользователь!" << std::endl;
+    Sleep(2000);
+    std::cout << "Вашей консоли настанет конец через: " << std::endl;
+    Sleep(500);
+    std::cout << "3" << std::endl;
+    Sleep(1000);
+    std::cout << "2" << std::endl;
+    Sleep(1000);
+    std::cout << "1" << std::endl;
+    Sleep(1000);
+    while (true) {
+        std::cout << "N\nI\n";
+        Sleep(3000);
+        std::cout << std::setw(20) << std::setfill('*') << "Я Власть" << std::endl;
+    }
+}
+
+void dayzero_zero() {
+    std::cout << "Пошел" << std::endl;
+}
+
+/**
+ * @brief Функция, которая выводит прощание.
+ */
+void sayGoodbye() {
+    std::cout << "До свидания!" << std::endl;
+}
+
+/**
+ * @brief Функция для обработки неизвестных команд.
+ * @param command Нераспознанная строка, введенная пользователем.
+ */
+void handleUnknownCommand(std::string command) {
+    std::cout << "Команда '" << command << "' не распознана." << std::endl;
+}
+
+
+--- infinite_cycle/infinite_cycle.cpp ---
+#include <iostream>
+#include <vector>
+#include <algorithm>
+#include <random>
+#include <chrono>
+#include <thread>
+
+int main() {
+    // Create vector with numbers 1-9
+    std::vector<double> numbers = {1, 2, 3, 4, 5, 6, 7, 8, 10, 11, 12, 13.5, 14.8, 14.9, 14.997};
+
+    // Set up random number generator
+    std::random_device rd;
+    std::mt19937 g(rd());
+
+    while (true) {
+        // Shuffle the numbers for random order
+        std::shuffle(numbers.begin(), numbers.end(), g);
+
+        // Output each number
+        for (double num : numbers) {
+            std::cout << num << " ";
+        }
+        std::cout << std::endl;
+
+        // Small delay to make output readable
+        std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+    }
+
+    return 0;
+}
+
+--- input/main.cpp ---
+#include <algorithm>
+#include <chrono>
+#include <cmath>
+#include <iostream>
+#include <string>
+#include <thread>
+#include <vector>
+
+#ifdef _WIN32
+#include <windows.h>
+#endif
+
+namespace {
+
+#ifdef _WIN32
+void enable_virtual_terminal() {
+    HANDLE hOut = GetStdHandle(STD_OUTPUT_HANDLE);
+    if (hOut == INVALID_HANDLE_VALUE) {
+        return;
+    }
+
+    DWORD mode = 0;
+    if (!GetConsoleMode(hOut, &mode)) {
+        return;
+    }
+
+    if ((mode & ENABLE_VIRTUAL_TERMINAL_PROCESSING) == 0) {
+        SetConsoleMode(hOut, mode | ENABLE_VIRTUAL_TERMINAL_PROCESSING);
+    }
+}
+#else
+void enable_virtual_terminal() {}
+#endif
+
+} // namespace
+
+int main() {
+    std::cout << "Enter message: ";
+    std::string message;
+    std::getline(std::cin, message);
+
+    if (message.empty()) {
+        std::cerr << "Message must not be empty." << std::endl;
+        return 1;
+    }
+
+    std::cout << "Enter frequency in Hz: ";
+    double frequencyHz = 0.0;
+    if (!(std::cin >> frequencyHz) || frequencyHz <= 0.0) {
+        std::cerr << "Frequency must be a positive number." << std::endl;
+        return 1;
+    }
+
+    std::cout << "Enter wave length (characters per period): ";
+    double waveLength = 0.0;
+    if (!(std::cin >> waveLength) || waveLength <= 0.0) {
+        std::cerr << "Wave length must be a positive number." << std::endl;
+        return 1;
+    }
+
+    enable_virtual_terminal();
+
+    const int amplitude = 6; // Number of rows above and below the center
+    const int rows = amplitude * 2 + 1;
+    const std::chrono::milliseconds frameDuration(33);
+    const auto startTime = std::chrono::steady_clock::now();
+    const double pi = std::acos(-1.0);
+
+    std::cout << "\nAnimation running. Press Ctrl+C to exit." << std::endl;
+    std::this_thread::sleep_for(std::chrono::milliseconds(500));
+
+    while (true) {
+        auto now = std::chrono::steady_clock::now();
+        std::chrono::duration<double> elapsed = now - startTime;
+        double t = elapsed.count();
+
+        std::vector<std::string> canvas(rows, std::string(message.size(), ' '));
+        for (std::size_t i = 0; i < message.size(); ++i) {
+            double offset = static_cast<double>(i) / waveLength;
+            double angle = offset * 2.0 * pi + t * frequencyHz * 2.0 * pi;
+            double y = std::sin(angle);
+
+            int row = static_cast<int>(std::lround(y * amplitude)) + amplitude;
+            row = std::clamp(row, 0, rows - 1);
+            canvas[row][i] = message[i];
+        }
+
+        std::cout << "\x1b[2J\x1b[H";
+        for (const auto &line : canvas) {
+            std::cout << line << '\n';
+        }
+        std::cout.flush();
+
+        std::this_thread::sleep_for(frameDuration);
+    }
+
+    return 0;
+}
+
+
+--- pdf_to_txt_converter.py ---
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""
+PDF to TXT Converter with Drag & Drop
+Перетащите PDF файл в окно для конвертации
+"""
+
+import tkinter as tk
+from tkinter import messagebox
+from tkinterdnd2 import DND_FILES, TkinterDnD
+import os
+
+try:
+    import pdfplumber
+    PDF_LIBRARY = "pdfplumber"
+except ImportError:
+    try:
+        import fitz  # PyMuPDF
+        PDF_LIBRARY = "pymupdf"
+    except ImportError:
+        PDF_LIBRARY = None
+
+def convert_pdf_to_txt_pdfplumber(pdf_path, txt_path):
+    """Конвертация PDF в TXT используя pdfplumber (сохраняет форматирование)"""
+    try:
+        with pdfplumber.open(pdf_path) as pdf:
+            with open(txt_path, 'w', encoding='utf-8') as txt_file:
+                for page_num, page in enumerate(pdf.pages, 1):
+                    text = page.extract_text()
+                    if text:
+                        txt_file.write(f"{'=' * 60}\n")
+                        txt_file.write(f"Страница {page_num}\n")
+                        txt_file.write(f"{'=' * 60}\n\n")
+                        txt_file.write(text)
+                        txt_file.write("\n\n")
+        return True
+    except Exception as e:
+        raise Exception(f"Ошибка при конвертации: {str(e)}")
+
+def convert_pdf_to_txt_pymupdf(pdf_path, txt_path):
+    """Конвертация PDF в TXT используя PyMuPDF (хорошо сохраняет форматирование)"""
+    try:
+        doc = fitz.open(pdf_path)
+        with open(txt_path, 'w', encoding='utf-8') as txt_file:
+            for page_num in range(len(doc)):
+                page = doc[page_num]
+                text = page.get_text()
+                txt_file.write(f"{'=' * 60}\n")
+                txt_file.write(f"Страница {page_num + 1}\n")
+                txt_file.write(f"{'=' * 60}\n\n")
+                txt_file.write(text)
+                txt_file.write("\n\n")
+        doc.close()
+        return True
+    except Exception as e:
+        raise Exception(f"Ошибка при конвертации: {str(e)}")
+
+def drop_file(event):
+    """Обработчик события перетаскивания файла"""
+    file_path = event.data.strip()
+
+    # Удаляем фигурные скобки, если они есть (Windows добавляет их)
+    if file_path.startswith('{') and file_path.endswith('}'):
+        file_path = file_path[1:-1]
+
+    # Проверяем, что это PDF файл
+    if not file_path.lower().endswith('.pdf'):
+        messagebox.showerror("Ошибка", "Пожалуйста, перетащите PDF файл")
+        return
+
+    if not os.path.exists(file_path):
+        messagebox.showerror("Ошибка", "Файл не найден")
+        return
+
+    # Обновляем интерфейс
+    status_label.config(text=f"Конвертация: {os.path.basename(file_path)}...")
+    root.update()
+
+    # Создаём имя выходного файла
+    txt_path = os.path.splitext(file_path)[0] + '.txt'
+
+    try:
+        # Конвертируем PDF в TXT
+        if PDF_LIBRARY == "pdfplumber":
+            convert_pdf_to_txt_pdfplumber(file_path, txt_path)
+        elif PDF_LIBRARY == "pymupdf":
+            convert_pdf_to_txt_pymupdf(file_path, txt_path)
+        else:
+            messagebox.showerror("Ошибка", 
+                "Не установлена библиотека для работы с PDF.\n"
+                "Установите: pip install pdfplumber\n"
+                "или: pip install PyMuPDF")
+            status_label.config(text="Перетащите PDF файл сюда")
+            return
+
+        status_label.config(text=f"✓ Готово! Сохранено: {os.path.basename(txt_path)}")
+        messagebox.showinfo("Успех", f"Файл успешно конвертирован!\n\nСохранён как:\n{txt_path}")
+
+    except Exception as e:
+        status_label.config(text="Ошибка конвертации")
+        messagebox.showerror("Ошибка", str(e))
+
+    # Возвращаем исходное сообщение через 3 секунды
+    root.after(3000, lambda: status_label.config(text="Перетащите PDF файл сюда"))
+
+def create_gui():
+    """Создание графического интерфейса"""
+    global root, status_label
+
+    # Создаём основное окно с поддержкой drag and drop
+    root = TkinterDnD.Tk()
+    root.title("PDF → TXT Конвертер")
+    root.geometry("600x400")
+    root.configure(bg="#f0f0f0")
+
+    # Заголовок
+    title_label = tk.Label(
+        root, 
+        text="PDF в TXT Конвертер",
+        font=("Arial", 20, "bold"),
+        bg="#f0f0f0",
+        fg="#333"
+    )
+    title_label.pack(pady=20)
+
+    # Описание
+    desc_label = tk.Label(
+        root,
+        text="Перетащите PDF файл в это окно для конвертации",
+        font=("Arial", 12),
+        bg="#f0f0f0",
+        fg="#666"
+    )
+    desc_label.pack(pady=5)
+
+    # Область для перетаскивания
+    drop_frame = tk.Frame(
+        root,
+        bg="#e8f4f8",
+        relief="solid",
+        borderwidth=2
+    )
+    drop_frame.pack(pady=30, padx=50, fill="both", expand=True)
+
+    # Метка состояния в области перетаскивания
+    status_label = tk.Label(
+        drop_frame,
+        text="Перетащите PDF файл сюда",
+        font=("Arial", 14),
+        bg="#e8f4f8",
+        fg="#007acc",
+        wraplength=500
+    )
+    status_label.pack(expand=True)
+
+    # Регистрируем область для перетаскивания файлов
+    drop_frame.drop_target_register(DND_FILES)
+    drop_frame.dnd_bind('<<Drop>>', drop_file)
+
+    # Информация о библиотеке
+    if PDF_LIBRARY:
+        lib_info = f"Используется: {PDF_LIBRARY}"
+    else:
+        lib_info = "⚠ Библиотека PDF не найдена! Установите: pip install pdfplumber"
+
+    info_label = tk.Label(
+        root,
+        text=lib_info,
+        font=("Arial", 9),
+        bg="#f0f0f0",
+        fg="#999"
+    )
+    info_label.pack(side="bottom", pady=10)
+
+    root.mainloop()
+
+if __name__ == "__main__":
+    if PDF_LIBRARY is None:
+        print("ВНИМАНИЕ: Не установлена библиотека для работы с PDF!")
+        print("Установите одну из следующих библиотек:")
+        print("  pip install pdfplumber")
+        print("  или")
+        print("  pip install PyMuPDF")
+        print()
+
+    create_gui()
+
+
+--- timer_multiple/main.cpp ---
+#include <iostream>
+#include <thread>
+#include <chrono>
+#include <atomic>
+#include <iomanip>
+#include <conio.h>  // For Windows-specific _kbhit() and _getch()
+
+// Atomic variables to safely share timer values between threads
+std::atomic<int> timer1{0};
+std::atomic<int> timer2{0};
+std::atomic<int> timer3{0};
+std::atomic<bool> running{true};
+
+// Function for first timer
+void timerFunction1() {
+    while (running) {
+        std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+        timer1++;
+    }
+}
+
+// Function for second timer
+void timerFunction2() {
+    while (running) {
+        std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+        timer2++;
+    }
+}
+
+// Function for third timer
+void timerFunction3() {
+    while (running) {
+        std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+        timer3++;
+    }
+}
+
+int main() {
+    // Start three timer threads
+    std::thread t1(timerFunction1);
+    std::thread t2(timerFunction2);
+    std::thread t3(timerFunction3);
+
+    std::cout << "Three Parallel Timers Started!" << std::endl;
+    std::cout << "Timer 1 | Timer 2 | Timer 3" << std::endl;
+    std::cout << "--------|---------|--------" << std::endl;
+
+    // Display loop - continuously update and show timer values
+    int counter = 0;
+    while (running) {
+        // Display current timer values on separate lines
+        std::cout << "Timer 1: " << std::setw(6) << timer1.load() << std::endl;
+        std::cout << "Timer 2: " << std::setw(6) << timer2.load() << std::endl;
+        std::cout << "Timer 3: " << std::setw(6) << timer3.load() << std::endl;
+        std::cout << std::endl;  // Extra line for spacing
+
+        std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+
+        // Clear screen for next update
+        std::cout << "\033[2J\033[H";
+
+        // Check for user input to stop (non-blocking)
+        if (_kbhit()) {
+            char ch = _getch();
+            if (ch == 'q' || ch == 'Q') {
+                running = false;
+            }
+        }
+
+        // Auto-stop after 10 seconds for demo purposes
+        counter++;
+        if (counter >= 1000) {  // 100 * 100ms = 10 seconds
+            std::cout << "Auto-stopping after 10 seconds..." << std::endl;
+            running = false;
+        }
+    }
+
+    // Wait for threads to finish
+    t1.join();
+    t2.join();
+    t3.join();
+
+    return 0;
+}
+
+--- waves/main.cpp ---
+#include <algorithm>
+#include <chrono>
+#include <cmath>
+#include <csignal>
+#include <iostream>
+#include <limits>
+#include <string>
+#include <thread>
+#include <vector>
+
+#ifdef _WIN32
+#include <windows.h>
+#endif
+
+namespace
+{
+#ifdef _WIN32
+bool enable_virtual_terminal_support()
+{
+    HANDLE h_out = GetStdHandle(STD_OUTPUT_HANDLE);
+    if (h_out == INVALID_HANDLE_VALUE)
+    {
+        return false;
+    }
+
+    DWORD console_mode = 0;
+    if (!GetConsoleMode(h_out, &console_mode))
+    {
+        return false;
+    }
+
+    DWORD desired_mode = console_mode | ENABLE_VIRTUAL_TERMINAL_PROCESSING;
+    if (!SetConsoleMode(h_out, desired_mode))
+    {
+        return false;
+    }
+
+    return true;
+}
+#endif
+
+class TerminalGuard
+{
+public:
+    TerminalGuard()
+    {
+        std::cout << "\x1b[?25l"; // hide cursor
+        std::cout.flush();
+    }
+
+    ~TerminalGuard()
+    {
+        std::cout << "\x1b[?25h"; // show cursor
+        std::cout.flush();
+    }
+};
+
+void handle_interrupt(int)
+{
+    std::cout << "\x1b[?25h" << std::flush;
+    std::_Exit(0);
+}
+
+constexpr double kPi = 3.14159265358979323846;
+constexpr double kTwoPi = kPi * 2.0;
+
+} // namespace
+
+int main()
+{
+#ifdef _WIN32
+    enable_virtual_terminal_support();
+#endif
+
+    std::signal(SIGINT, handle_interrupt);
+
+    const int width = 80;
+    const int height = 24;
+    const int center_line = height / 2;
+
+    double amplitude = 6.0;
+    double wavelength = 18.0;
+    double speed = 0.25;
+
+    std::cout << "Wave intensity (amplitude) [default 6]: ";
+    if (!(std::cin >> amplitude))
+    {
+        std::cin.clear();
+        std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
+        amplitude = 6.0;
+    }
+
+    amplitude = std::clamp(amplitude, 1.0, static_cast<double>(height / 2 - 1));
+
+    std::cout << "Wave length in characters [default 18]: ";
+    if (!(std::cin >> wavelength))
+    {
+        std::cin.clear();
+        std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
+        wavelength = 18.0;
+    }
+
+    wavelength = std::max(4.0, wavelength);
+
+    std::cout << "Animation speed (rad/step) [default 0.25]: ";
+    if (!(std::cin >> speed))
+    {
+        std::cin.clear();
+        std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
+        speed = 0.25;
+    }
+
+    speed = std::clamp(speed, 0.01, 1.0);
+
+    std::cout << "\nPress Ctrl+C to exit." << std::endl;
+    std::this_thread::sleep_for(std::chrono::milliseconds(700));
+
+    TerminalGuard terminal_guard;
+    std::cout << "\x1b[2J\x1b[H"; // clear screen and reset cursor
+
+    const std::string palette = " .-~^*=#@";
+    double phase = 0.0;
+
+    std::vector<std::string> buffer(height, std::string(width, ' '));
+
+    while (true)
+    {
+        for (auto &row : buffer)
+        {
+            std::fill(row.begin(), row.end(), ' ');
+        }
+
+        for (int x = 0; x < width; ++x)
+        {
+            const double normalized_x = static_cast<double>(x) / wavelength;
+            const double angle = normalized_x * kTwoPi + phase;
+            const double wave_value = std::sin(angle);
+            const double y = amplitude * wave_value;
+            const double precise_row = static_cast<double>(center_line) + y;
+
+            const int base_row = static_cast<int>(std::floor(precise_row));
+            const double fraction = precise_row - static_cast<double>(base_row);
+            const double magnitude = std::abs(wave_value);
+            const std::size_t palette_index = static_cast<std::size_t>(
+                std::min(static_cast<std::size_t>(palette.size() - 1),
+                         static_cast<std::size_t>(std::round(magnitude * (palette.size() - 1)))));
+            const char glyph = palette[palette_index];
+
+            if (base_row >= 0 && base_row < height)
+            {
+                buffer[base_row][x] = glyph;
+            }
+
+            const int upper_row = base_row + 1;
+            const int lower_row = base_row - 1;
+
+            if (fraction > 0.6 && upper_row >= 0 && upper_row < height)
+            {
+                buffer[upper_row][x] = palette_index > 0 ? palette[palette_index - 1] : glyph;
+            }
+            else if (fraction < 0.4 && lower_row >= 0 && lower_row < height)
+            {
+                buffer[lower_row][x] = palette_index > 0 ? palette[palette_index - 1] : glyph;
+            }
+        }
+
+        std::cout << "\x1b[H";
+        for (const auto &row : buffer)
+        {
+            std::cout << row << '\n';
+        }
+        std::cout.flush();
+
+        phase += speed;
+        if (phase > kTwoPi)
+        {
+            phase -= kTwoPi;
+        }
+
+        std::this_thread::sleep_for(std::chrono::milliseconds(60));
+    }
+
+    return 0;
+}
+
+
+--- webassembly/README.md ---
+# Fractal Sunforge
+
+"Fractal Sunforge" ? ?????????????? ??????? ? ?????????????? ??????????, ????????????? ? WebAssembly (C++) ? ??????????? ?? HTML5 canvas ????? JavaScript.
+
+## ?????????
+- `main.cpp` ? ???? ?????????, ???????????? ??????? `init`, `get_framebuffer`, `render`.
+- `index.html` ? ??????? ???????? ? ????????? ??????????.
+- `style.css` ? ?????????? ?????????? ????? ? ???????? ?????????? ????????.
+- `main.js` ? ???? ????? ????????? ? Wasm-???????, ????????? ?????????? ? ?????????? ? DPI.
+
+## ?????? WebAssembly
+??????????? [Emscripten](https://emscripten.org/).
+
+```
+emcc main.cpp -O3 \
+  -s STANDALONE_WASM \
+  -s EXPORTED_FUNCTIONS='["_init","_get_framebuffer","_render"]' \
+  -s ALLOW_MEMORY_GROWTH=1 \
+  --no-entry \
+  -o main.wasm
+```
+
+> ??????????: ????? `STANDALONE_WASM` ? `--no-entry` ??????? ?????????? ??????, ??????? ???????? ??? ?????? ????????????? ????? `WebAssembly.instantiate`. ??????? `_` ? ?????? ????????? ????????????? `extern "C"` ???????? ?? C++.
+
+## ??????
+1. ???????? ?????? (`main.wasm`) ???????? ????.
+2. ?????????? ????? `index.html`, `style.css`, `main.js`, `main.wasm` ?? ????? ??????????? ???????.
+   - ??? ????????? ???????? ???????? `python -m http.server`.
+3. ???????? `http://localhost:8000` (??? ??????????????? ????) ? ??????????? ????????.
+
+## ????????? ? ????????????
+- ??????? ??????? ????? ? `main.cpp` (??????? `palette`) ??? ???????? `glow_strength` ??? ?????? ?????????.
+- ??????????? ????? ? CTA ? `index.html` ??? ??????????? ??????.
+- ????????????????? ? ??????????????? ?????? ? ????????? ? `style.css`, ????? ??????? ???????????? ?????.
+
+????????? ??????????? ?? ????????? ?????????!
+
+
+--- webassembly/compile.txt ---
+emcc main.cpp -O3 -sSTANDALONE_WASM=1 "-sEXPORTED_FUNCTIONS=['_init','_get_framebuffer','_render']" -sALLOW_MEMORY_GROWTH=1 --no-entry -o main.wasm
+
+--- webassembly/main.bat ---
+emcc main.cpp -O3 \
+  -s STANDALONE_WASM \
+  -s EXPORTED_FUNCTIONS='["_init","_get_framebuffer","_render"]' \
+  -s ALLOW_MEMORY_GROWTH=1 \
+  --no-entry \
+  -o main.wasm
+
+--- webassembly/main.cpp ---
+#include <cmath>
+#include <cstdint>
+#include <vector>
+
+namespace {
+    int g_width = 0;
+    int g_height = 0;
+    std::vector<uint32_t> g_framebuffer;
+    uint64_t g_frame_counter = 0;
+
+    constexpr int kMaxIterations = 120;
+
+    std::vector<float> g_nx;
+    std::vector<float> g_nx2;
+    std::vector<float> g_ny;
+    std::vector<float> g_ny2;
+    bool g_viewport_dirty = true;
+    bool g_first_frame_pending = true;
+
+    inline float clamp(float v, float lo, float hi) {
+        return std::fmax(lo, std::fmin(v, hi));
+    }
+
+    inline uint32_t pack_rgba(float r, float g, float b, float a = 1.0f) {
+        r = clamp(r, 0.0f, 1.0f);
+        g = clamp(g, 0.0f, 1.0f);
+        b = clamp(b, 0.0f, 1.0f);
+        a = clamp(a, 0.0f, 1.0f);
+        auto ir = static_cast<uint8_t>(r * 255.0f + 0.5f);
+        auto ig = static_cast<uint8_t>(g * 255.0f + 0.5f);
+        auto ib = static_cast<uint8_t>(b * 255.0f + 0.5f);
+        auto ia = static_cast<uint8_t>(a * 255.0f + 0.5f);
+        return (ia << 24) | (ib << 16) | (ig << 8) | ir;
+    }
+
+    inline float palette(float t, float a, float b, float c, float d) {
+        return a + b * std::cos(6.2831853f * (c * t + d));
+    }
+
+    void ensure_viewport_cache() {
+        if (!g_viewport_dirty) {
+            return;
+        }
+
+        if (g_width <= 0 || g_height <= 0) {
+            g_nx.clear();
+            g_nx2.clear();
+            g_ny.clear();
+            g_ny2.clear();
+            g_viewport_dirty = false;
+            return;
+        }
+
+        const int width = g_width;
+        const int height = g_height;
+        const float inv_width = 1.0f / static_cast<float>(width);
+        const float inv_height = 1.0f / static_cast<float>(height);
+        const float aspect = static_cast<float>(width) * inv_height;
+        const float scale_x = aspect * 2.0f;
+        const float scale_y = 2.0f;
+
+        g_nx.resize(static_cast<size_t>(width));
+        g_nx2.resize(static_cast<size_t>(width));
+        for (int x = 0; x < width; ++x) {
+            const float nx = (static_cast<float>(x) * inv_width - 0.5f) * scale_x;
+            const size_t idx = static_cast<size_t>(x);
+            g_nx[idx] = nx;
+            g_nx2[idx] = nx * nx;
+        }
+
+        g_ny.resize(static_cast<size_t>(height));
+        g_ny2.resize(static_cast<size_t>(height));
+        for (int y = 0; y < height; ++y) {
+            const float ny = (static_cast<float>(y) * inv_height - 0.5f) * scale_y;
+            const size_t idx = static_cast<size_t>(y);
+            g_ny[idx] = ny;
+            g_ny2[idx] = ny * ny;
+        }
+
+        g_viewport_dirty = false;
+    }
+}
+
+extern "C" {
+
+void init(int width, int height) {
+    g_width = width;
+    g_height = height;
+    g_framebuffer.resize(static_cast<size_t>(width) * static_cast<size_t>(height));
+    g_frame_counter = 0;
+    g_viewport_dirty = true;
+    g_first_frame_pending = true;
+}
+
+uint32_t* get_framebuffer() {
+    return g_framebuffer.data();
+}
+
+void render(double time_seconds) {
+    if (g_width <= 0 || g_height <= 0) {
+        return;
+    }
+
+    constexpr double kFrameDuration = 1.0 / 60.0;
+
+    double sanitized_time = time_seconds;
+    if (!std::isfinite(sanitized_time) || sanitized_time < 0.0) {
+        sanitized_time = static_cast<double>(g_frame_counter) * kFrameDuration;
+    }
+
+    const uint64_t desired_frame = static_cast<uint64_t>(sanitized_time / kFrameDuration);
+    if (g_first_frame_pending || desired_frame > g_frame_counter) {
+        g_frame_counter = desired_frame;
+        g_first_frame_pending = false;
+    } else if (desired_frame < g_frame_counter) {
+        g_frame_counter = desired_frame;
+    } else {
+        return;
+    }
+
+    ensure_viewport_cache();
+
+    const int width = g_width;
+    const int height = g_height;
+    const size_t width_sz = static_cast<size_t>(width);
+    const float time = static_cast<float>(static_cast<double>(g_frame_counter) * kFrameDuration);
+
+    const float inv_max_iterations = 1.0f / static_cast<float>(kMaxIterations);
+    const float theta = time * 0.2f;
+    const float radius = 0.7885f + 0.12f * std::sin(time * 0.31f);
+    const float cx = radius * std::cos(theta);
+    const float cy = radius * std::sin(theta);
+
+    const float sun_pulse = 0.5f + 0.5f * std::sin(time * 0.9f);
+    const float time_phase = time * 0.5f;
+    const float palette_r_a = 0.5f + 0.5f * sun_pulse;
+    constexpr float palette_g_a = 0.35f;
+    constexpr float palette_b_a = 0.25f;
+    constexpr float diffract_freq = 1.5f;
+    constexpr float diffract_amplitude = 0.15f;
+    constexpr float bailout = 16.0f;
+
+    uint32_t* framebuffer = g_framebuffer.data();
+    const float* nx_values = g_nx.data();
+    const float* nx2_values = g_nx2.data();
+    const float* ny_values = g_ny.data();
+    const float* ny2_values = g_ny2.data();
+
+    for (int y = 0; y < height; ++y) {
+        const float ny = ny_values[y];
+        const float ny2 = ny2_values[y];
+        uint32_t* pixel = framebuffer + static_cast<size_t>(y) * width_sz;
+        const float* nx_ptr = nx_values;
+        const float* nx2_ptr = nx2_values;
+
+        for (int x = 0; x < width; ++x, ++pixel, ++nx_ptr, ++nx2_ptr) {
+            const float nx = *nx_ptr;
+            const float radial = *nx2_ptr + ny2;
+            const float diffract = std::sin(radial * diffract_freq + time_phase) * diffract_amplitude;
+
+            float zx = nx;
+            float zy = ny;
+
+            int k = 0;
+            for (; k < kMaxIterations; ++k) {
+                const float xt = zx * zx - zy * zy + cx;
+                const float yt = 2.0f * zx * zy + cy;
+
+                zx = xt + diffract;
+                zy = yt;
+
+                if ((zx * zx + zy * zy) > bailout) {
+                    break;
+                }
+            }
+
+            float shade = static_cast<float>(k) * inv_max_iterations;
+            shade = shade * (0.6f + 0.4f * shade);
+
+            const float t = shade;
+            const float r = palette(t, palette_r_a, 0.5f, 0.5f, 0.0f);
+            const float g = palette(t, palette_g_a, 0.45f, 0.5f, 0.2f);
+            const float b = palette(t, palette_b_a, 0.35f, 0.5f, 0.35f);
+
+            *pixel = pack_rgba(r, g, b, 1.0f);
+        }
+    }
+}
+
+}
+
+--- webassembly/main.js ---
+﻿const canvas = document.getElementById("fractal");
+const ctx = canvas.getContext("2d", { alpha: true });
+ctx.imageSmoothingEnabled = false;
+
+let wasmExports = null;
+let wasmMemory = null;
+let framebufferPtr = 0;
+let frameView = null;
+let imageData = null;
+let currentWidth = 0;
+let currentHeight = 0;
+let rafHandle = 0;
+
+const targetFrameMs = 1000 / 60;
+let lastRenderTime = 0;
+let frameIndex = 0;
+
+function configureCanvas() {
+    const dpi = Math.min(window.devicePixelRatio || 1, 2.5);
+    const cssWidth = Math.floor(window.innerWidth);
+    const cssHeight = Math.floor(window.innerHeight);
+    const pixelWidth = Math.max(1, Math.floor(cssWidth * dpi));
+    const pixelHeight = Math.max(1, Math.floor(cssHeight * dpi));
+
+    if (pixelWidth === currentWidth && pixelHeight === currentHeight) {
+        return;
+    }
+
+    currentWidth = pixelWidth;
+    currentHeight = pixelHeight;
+
+    canvas.width = pixelWidth;
+    canvas.height = pixelHeight;
+
+    if (!wasmExports) {
+        return;
+    }
+
+    wasmExports.init(pixelWidth, pixelHeight);
+    framebufferPtr = wasmExports.get_framebuffer();
+    bindViews();
+}
+
+function bindViews() {
+    const byteLength = currentWidth * currentHeight * 4;
+    if (byteLength <= 0) {
+        return;
+    }
+
+    if (!wasmMemory || framebufferPtr === 0) {
+        return;
+    }
+
+    frameView = new Uint8ClampedArray(wasmMemory.buffer, framebufferPtr, byteLength);
+    imageData = new ImageData(frameView, currentWidth, currentHeight);
+}
+
+function renderFrame(timestamp) {
+    if (!wasmExports || !imageData) {
+        rafHandle = requestAnimationFrame(renderFrame);
+        return;
+    }
+
+    if (timestamp - lastRenderTime < targetFrameMs) {
+        rafHandle = requestAnimationFrame(renderFrame);
+        return;
+    }
+    lastRenderTime = timestamp;
+
+    const seconds = frameIndex * (1 / 60);
+    frameIndex += 1;
+    wasmExports.render(seconds);
+
+    if (frameView.byteLength !== currentWidth * currentHeight * 4) {
+        wasmMemory = wasmExports.memory;
+        bindViews();
+    }
+
+    ctx.putImageData(imageData, 0, 0);
+    rafHandle = requestAnimationFrame(renderFrame);
+}
+
+async function loadWasm() {
+    const response = await fetch("main.wasm");
+
+    const imports = {
+        env: {
+            abort: () => {
+                console.error("WebAssembly module has aborted.");
+            },
+            emscripten_notify_memory_growth: () => {
+                // Emscripten emits this hook when memory grows; our JS side rebinds views on demand.
+            },
+        },
+    };
+
+    let wasmModule = null;
+    if (WebAssembly.instantiateStreaming) {
+        const result = await WebAssembly.instantiateStreaming(response, imports);
+        wasmModule = result.instance;
+    } else {
+        const buffer = await response.arrayBuffer();
+        const result = await WebAssembly.instantiate(buffer, imports);
+        wasmModule = result.instance;
+    }
+
+    wasmExports = wasmModule.exports;
+    wasmMemory = wasmExports.memory;
+
+    configureCanvas();
+    renderFrame(performance.now());
+}
+
+window.addEventListener("resize", () => {
+    configureCanvas();
+});
+
+window.addEventListener("visibilitychange", () => {
+    if (document.hidden) {
+        cancelAnimationFrame(rafHandle);
+    } else {
+        rafHandle = requestAnimationFrame(renderFrame);
+    }
+});
+
+configureCanvas();
+loadWasm().catch((error) => {
+    console.error("Failed to load WebAssembly module", error);
+});
+
+
+--- webassembly/main.wasm ---
+ asm   U` `` ` ` `  ` ` `|}`}}``| `}`||` 'envemscripten_notify_memory_growth  ,+     	
+	   
+
+  pA ¨memory init get_framebuffer 	render 
+__indirect_function_table _initialize _emscripten_stack_restore *emscripten_stack_get_current +	# A'#!" %&$()(
+ôm+R AÐ#B 7 AØ#A 6 AÜ#B 7 Aä#A 6 Aè#B 7 Að#A 6 Aô#B 7 Aü#A 6 A$B 7 A$A 6   AÐ#( " @AÔ#  6 AØ#(     AÜ#( " @Aà#  6 Aä#(     Aè#( " @Aì#  6 Að#(     Aô#( " @Aø#  6 Aü#(     A$( " @A$  6 A$(   oA$ 6 A$  6 @   l" AÔ#( AÐ#( "kAu"K@AÐ#   k   O
+ AÔ#   Atj6 A$B 7 A $A :  A¡$A :  î   ("  ("kAuM@    At" @ A   ü    j 6@   ( "k"Au" j"AI@Aÿÿÿÿ  k"Au"   I AüÿÿÿO"@ AO
+ At!  j! At"@ A  ü   Atk! @   ü
+      Atj6    j6   6  @ A"Aä!6  AÔ"6 A! A A-  E
+ @@@  Aj" AqE
+  -  
+ @  "Aj! A ( "k rAxqAxF
+ @ " Aj!  -  
+   Ak" A
+j"A 6   6   6  Aj!  Aj" @ A  ü
+    6 A#6  A" Aä!6   A¼!6   AÐ!6   AÐ#( ±
+
+}~|@A$( "A L
+ A$( "A L
+ @A¡$-  A     A$) "ºD?¢"    ½"B S  Bÿÿÿÿÿÿÿÿÿ "B}Bðÿ T B}BÿÿÿÿÿÿÿT PD?£ü" XE@A¡$A:    Z
+A$ 7 AÜ#( !@A $-  @A$( !Aô#( !	 ³!C  ? ³!@Aà#(  kAu" I@AÜ#  k  M
+ Aà#  Atj6   !@Aì#( Aè#( "kAu" I@Aè#  kAè#( !  M
+ Aì#  Atj6 C  ? !  !A !AÜ#( ! AG@ Aþÿÿÿq!@  At"
+j  ³ C   ¿"8   
+j  8   Ar"
+At"j  
+³ C   ¿"8   j  8  Aj! Aj" G
+  Aq@  At"j  ³ C   ¿"8   j  8 @Aø#( Aô#( "kAu" I@Aô#  k  M
+ Aø#  Atj6 @A$( A$( "kAu" I@A$  kA$( !  M
+ A$  Atj6 A !Aô#( !	 AG@ Aþÿÿÿq!A !@ 	 At"j ³ C   ¿" "8   j  8  	 Ar"At"j ³ C   ¿" "8   j  8  Aj! Aj" G
+  Aq@ 	 At"j ³ C   ¿" "8   j  8 A $A:  AÜ#( !A$) !A$( !A$( ! ºD?¢¶"CR¸>! CÍÌL>"! ! Cfff?! A L
+  A L
+   CÂõ=C#ÛI?"!  ! C   ?! C   ?C   ?C   ?C   ?!Aè#( !
+AÐ#( !@   lAtj!  At"j* !  	j* !A !
+ ! 
+!@  * C  À? C>! * !A ! !@@  !      "    " C  A^@ !Aø ! Aj"Aø G
+ ³C<" CÍÌÌ>C?C   ?"CÍÌL>CÛÉ@Cffæ>C33³>"C  ?C  ? ¼AÿÿÿÿqAüM"C    C     ¼AÿÿÿÿqAüM!  C33³>CÛÉ@C33³>C  >"C  ?C  ? ¼AÿÿÿÿqAüM"C    C     ¼AÿÿÿÿqAüMC  CC   ?üAt C  CC   ?üAtr C    CÛÉ@C   ? "C  ?C  ? ¼AÿÿÿÿqAüM"C    C     ¼AÿÿÿÿqAüMC  CC   ?ürAxr6  Aj! Aj! Aj! 
+Aj"
+ G
+  Aj" G
+  O|    ¢"     ¢"¢  DiPîàBù>¢D'èÀV¿ ¢ DB:áSU¥?¢  D^ýÿÿß¿¢D      ð?   ¶K|      ¢"¢"  ¢¢ D§F;ÍÆ>¢DtçÊâù *¿ ¢  D²ûn?¢Dw¬ËTUUÅ¿ ¢    ¶Ã|# Ak"$ @  ¼"Aÿÿÿÿq"AÚ¤îM@   »" DÈÉm0_ä?¢D      8C D      8Ã "D   Pû!ù¿¢  Dcba´Q¾¢ "9  ü! D   `û!é¿c@   D      ð¿ "D   Pû!ù¿¢  Dcba´Q¾¢ 9  Ak! D   `û!é?dE
+   D      ð? "D   Pû!ù¿¢  Dcba´Q¾¢ 9  Aj! AüO@     »9 A !   AvAk"Atk¾»9 Aj!# A°k"$   AkAm"A  A J"Ahlj!	A°	( "A N@ Aj! !@ AÀj Atj A H|D         At(À	·9  Aj! Aj" G
+  	Ak!A ! A  A J!@A !D        !@  Atj+  AÀj  kAtj+ ¢  ! Aj"AG
+   Atj 9   F! Aj! E
+ A/ 	k!A0 	k!
+ AtAÀ	j! 	Ak! !@@  Atj+ !A ! ! A J@@ Aàj Atj D      p>¢ü·"D      pÁ¢  ü6   AtjAk+   ! Ak! Aj" G
+   " D      À?¢D       À¢ " ü"·¡!@@@ A L"E@ At j" (Ü"  
+u" 
+tk"6Ü  j!  u 
+ At j(ÜAu"
+A L
+A!
+ D      à?f
+ A !
+A !A !A! A J@@ Aàj Atj"( !@  Aÿÿÿ E
+A k6 A!A A !A! Aj" G
+ @ 
+ Aÿÿÿ!@@  Aÿÿÿ! At j" (Ü q6Ü Aj! 
+AG
+ D      ð? ¡!A!
+ 
+  D      ð? ¡! D        a@A ! !@  L
+ @ Aàj Ak"Atj(  r!  J
+  E
+ @ Ak! Aàj Ak"Atj( E
+ A!@ "Aj! Aàj  kAtj( E
+   j!@ AÀj Aj"Atj  Atj( ·9 A !D        !@  Atj+  AÀj  kAtj+ ¢  ! Aj"AG
+   Atj 9   H
+  !@ A 	k"D      pAf@ Aàj Atj D      p>¢ü"·D      pÁ¢  ü6  Aj! 	! ü! Aàj Atj 6 D      ð? ! A N@ !@  "Atj  Aàj Atj( ·¢9  Ak! D      p>¢! 
+ A ! !@    J!  k!	  Atj!A !D        !@ At"
++ 
+ j+ ¢  !  G!
+ Aj! 
+
+  A j 	Atj 9  Ak!  G! Aj! 
+ D        ! A N@@ "Ak!  A j Atj+  ! 
+     
+9  A°j$  Aq! + ! A H@  9 A  k!  9  Aj$  ê|# Ak"$ }  ¼"Aÿÿÿÿq"AÚ¤úM@C  ? AÌI
+  » AÑ§íM@ AäÛO@D-DTû!	@D-DTû!	À A H  »   »! A H@ D-DTû!ù? 
+D-DTû!ù? ¡
+ AÕãM@ AàÛ¿O@D-DTû!@D-DTû!À A H  »  A H@DÒ!3|ÙÀ  »¡
+  »DÒ!3|ÙÀ 
+     AüO
+    Aj! +!@@@@ AqAk   
+  
+!  Aj$   ¨ @ AN@  D      à¢!  AÿI@ Aÿk!  D      à¢! Aý  AýOAþk! AxJ
+   D      `¢!  A¸pK@ AÉj!  D      `¢! Aðh  AðhMAj!   Aÿj­B4¿¢|# Ak"$ @  ¼"Aÿÿÿÿq"AÚ¤úM@ AÌI
+  »
+!  AÑ§íM@  »! AãÛM@ A H@ D-DTû!ù? !  D-DTû!ù¿ ! D-DTû!	ÀD-DTû!	@ A N  
+!  AÕãM@ AßÛ¿M@  »! A H@ DÒ!3|Ù@ !  DÒ!3|ÙÀ ! D-DTû!@D-DTû!À A H  » 
+!  AüO@    !    Aj! +!@@@@ AqAk  
+!  !  
+!  !  Aj$   Å'# Ak"
+$ @@@@@@@@@@  AôM@A¨$( "A  AjAøq  AI"Av" v"Aq@@ AsAq  j"At"AÐ$j"  (Ø$"("F@A¨$ A~ wq6    6   6 Aj!   Ar6  j" (Ar6 A°$( "M
+ @@A  t"A  kr   tqh"At"AÐ$j" (Ø$" ("F@A¨$ A~ wq"6   6  6   Ar6   j"  k"Ar6   j 6  @ AxqAÐ$j!A¼$( ! A Avt"qE@A¨$  r6   (!  6  6  6  6  Aj! A¼$ 6 A°$ 6 A¬$( "E
+ hAt(Ø&"(Axq k! !@@ (" E@ (" E
+  (Axq k"   I"!    !  ! (!	  (" G@ ("  6   6
+ (" Aj ("E
+ Aj!@ ! " Aj!  ("
+   Aj!  ("
+  A 6 	A!  A¿K
+   Aj"Axq!A¬$( "E
+ A!A  k!  AôÿÿM@ A& Avg" kvAq  AtkA>j!@@@ At(Ø&"E@A ! A !  A AvkA  AGt!@@ (Axq k" O
+  ! "
+ A ! !    ("   AvAqj("F   !  At! 
+    rE@A !A t" A   kr q" E
+  hAt(Ø&!   E
+@  (Axq k" I!   !    !  ("   (" 
+  E
+  A°$(  kO
+  (!  (" G@ ("  6   6 (" Aj ("E
+ Aj!@ ! " Aj!  ("
+   Aj!  ("
+  A 6  A°$( "M@A¼$( ! @  k"AO@   j" Ar6   j 6    Ar6   Ar6   j" (Ar6A !A !A°$ 6 A¼$ 6   Aj! 	 A´$( "I@A´$  k"6 AÀ$AÀ$( "  j"6   Ar6   Ar6  Aj! 	A !  A/j"A(( @A(( A(B7 A(B 7 A( 
+AjApqAØªÕªs6 A(A 6 Aä'A 6 A "j"A  k"q" M
+Aà'( "@AØ'( " j"	 M
+	  	I
+	@Aä'-  AqE@@@@@AÀ$( "@Aè'! @  ( " M@    (jI
+  (" 
+ A "AF
+ !A(( " Ak" q@  k  jA   kqj!  M
+Aà'( " @AØ'( " j" M
+   I
+ "  G
+  k q""  (   (jF
+ !   AF
+ A0j M@  !A(( "  kjA  kq"AF
+  j!  ! AG
+Aä'Aä'( Ar6  !A !  AF
+  AF
+   M
+   k" A(jM
+AØ'AØ'(  j" 6 AÜ'(   I@AÜ'  6 @AÀ$( "@Aè'! @   ( "  ("jF
+  (" 
+ A¸$( " A    ME@A¸$ 6 A ! Aì' 6 Aè' 6 AÈ$A6 AÌ$A(( 6 Aô'A 6 @  At" AÐ$j"6Ø$  6Ü$  Aj" A G
+ A´$ A(k" Ax kAq"k"6 AÀ$  j"6   Ar6   jA(6AÄ$A(( 6   M
+  K
+  (Aq
+    j6AÀ$ Ax kAq" j"6 A´$A´$(  j"  k" 6    Ar6  jA(6AÄ$A(( 6 A ! A ! A¸$(  K@A¸$ 6   j!Aè'! @@   ( "G@  (" 
+  - AqE
+Aè'! @@  ( " M@    (j"I
+  (! A´$ A(k" Ax kAq"k"6 AÀ$  j"6   Ar6   jA(6AÄ$A(( 6   A' kAqjA/k"    AjI"A6 Að') 7 Aè') 7Að' Aj6 Aì' 6 Aè' 6 Aô'A 6  Aj! @  A6  Aj!  Aj!   I
+   F
+   (A~q6   k"Ar6  6  AÿM@ AøqAÐ$j! A¨$( "A Avt"qE@A¨$  r6     (!   6  6A!AA!  AÿÿÿM@ A& Avg" kvAq  AtkA>j!    6 B 7  AtAØ&j!@@A¬$( "A  t"qE@A¬$  r6   6  A  AvkA   AGt!  ( !@ "(Axq F
+  Av!  At!   Aqj"("
+   6  6A! "! A ("  6  6   6A ! A!A j 6   j  6 A´$( "  M
+ A´$   k"6 AÀ$AÀ$( "  j"6   Ar6   Ar6  Aj! A¤$A06 A !    6     ( j6 Ax kAqj" Ar6 Ax kAqj"  j"k!@AÀ$(  F@AÀ$ 6 A´$A´$(  j" 6    Ar6A¼$(  F@A¼$ 6 A°$A°$(  j" 6    Ar6   j  6  (" AqAF@  Axq!	 (!@  AÿM@ (" F@A¨$A¨$( A~  Avwq6   6  6 (!@  G@ ("  6   6@ ("  Aj (" E
+ Aj!@ !  "Aj!  (" 
+  Aj! (" 
+  A 6 A ! E
+ @ (" At"(Ø& F@ AØ&j 6  
+A¬$A¬$( A~  wq6 @  (F@  6  6 E
+  6 (" @   6   6 (" E
+    6   6  	j!  	j"(!    A~q6  Ar6  j 6  AÿM@ AøqAÐ$j! A¨$( "A Avt"qE@A¨$  r6     (!   6  6   6  6A! AÿÿÿM@ A& Avg" kvAq  AtkA>j!  6 B 7 AtAØ&j! @@A¬$( "A t"qE@A¬$  r6    6  A AvkA  AGt!  ( !@ " (Axq F
+ Av! At!   Aqj"("
+   6   6  6  6  (" 6   6 A 6   6  6 Aj! @ E
+ @ ("At"(Ø& F@ AØ&j  6   
+A¬$ A~ wq"6 @  (F@   6   6  E
+   6 ("@   6   6 ("E
+    6   6@ AM@   j" Ar6   j"   (Ar6  Ar6  j" Ar6  j 6  AÿM@ AøqAÐ$j! A¨$( "A Avt"qE@A¨$  r6     (!   6  6   6  6A!  AÿÿÿM@ A& Avg" kvAq  AtkA>j!    6 B 7  AtAØ&j!@@ A  t"qE@A¬$  r6   6   6 A  AvkA   AGt!  ( !@ "(Axq F
+  Av!  At!   Aqj"("
+   6  6  6  6 ("  6  6 A 6  6   6 Aj! @ 	E
+ @ ("At"(Ø& F@ AØ&j  6   
+A¬$ A~ wq6 @  	(F@ 	  6 	  6  E
+   	6 ("@   6   6 ("E
+    6   6@ AM@   j" Ar6   j"   (Ar6  Ar6  j" Ar6  j 6  @ AxqAÐ$j! A¼$( !A Avt" qE@A¨$  r6     (!   6  6   6  6A¼$ 6 A°$ 6  Aj!  
+Aj$   q~@AÈ#( "­  ­B|Bøÿÿÿ|"BÿÿÿÿX@ §" ? AtM
+  ? AtkAÿÿjAv@ AFA A  A
+A¤$A06 AAÈ#  6  9A    AM!@@ " 
+ A(( "E
+     E@   ä@  E
+   Ak"  Ak( " Axq"j!@  Aq
+   AqE
+  ( " k"A¸$( I
+   j!@@@A¼$(  G@ (!  AÿM@  ("G
+A¨$A¨$( A~  Avwq6  (!  G@ ("  6   6 ("  Aj (" E
+ Aj!@ !  "Aj! (" 
+  Aj! (" 
+  A 6  (" AqAG
+A°$ 6    A~q6  Ar6  6   6  6A ! E
+ @ (" At"(Ø& F@ AØ&j 6  
+A¬$A¬$( A~  wq6 @  (F@  6  6 E
+  6 (" @   6   6 (" E
+    6   6  O
+  (" AqE
+ @@@@  AqE@AÀ$(  F@AÀ$ 6 A´$A´$(  j" 6    Ar6 A¼$( G
+A°$A 6 A¼$A 6 A¼$( " F@A¼$ 6 A°$A°$(  j" 6    Ar6   j  6   Axq j! (!  AÿM@ (" F@A¨$A¨$( A~  Avwq6   6  6 (!  G@ ("  6   6 ("  Aj (" E
+ Aj!@ !  "Aj! (" 
+  Aj! (" 
+  A 6    A~q6  Ar6  j 6 A ! E
+ @ (" At"(Ø& F@ AØ&j 6  
+A¬$A¬$( A~  wq6 @  (F@  6  6 E
+  6 (" @   6   6 (" E
+    6   6  Ar6  j 6   G
+ A°$ 6  AÿM@ AøqAÐ$j! A¨$( "A Avt"qE@A¨$  r6     (!   6  6   6  6A! AÿÿÿM@ A& Avg" kvAq  AtkA>j!  6 B 7 AtAØ&j!@A¬$( " A t"qE@A¬$   r6   6 A!A A AvkA  AGt! ( !@ " (Axq F
+ Av! At!   Aqj"("
+   6A!  !A! "   (" 6   6A!A!A !  j 6    6  j 6 AÈ$AÈ$( Ak" A  6    AÐ jAÐ j       t E@  ( (F   F@A ("-  !@  ("-  " E
+    G
+ @ - ! - " E
+ Aj! Aj!   F
+    F§# AÐ k"$ @A   A 
+ A  E
+ # Ak"$   ( "Ak( "6   j6  Ak( 6 ("A A ! (!@ @ (!# A@j"$  A@k$ A   ! !# A@j"$   N@ B 7 B 7$ B 7, B 7 A 6 A 6  6 A 6< B74  6  Aj  AA  ( (  A  (! A@k$  "
+ # A@j"$  A 6 AÐ6  6 A 6A ! AjA A'ü  A 6< A: ;  Aj AA  ( ( @@@ ((  (A  ($AFA  ( AFA  (,AF! (AG@ (,
+ ( AG
+ ($AG
+ (! A@k$  ! Aj$ A  E
+  ( "E
+ AjA A8ü  A: K A6    6  6 A6D  Aj A ( (  (," AF@  ($6   AF!  AÐ j$    A	6 Aç6 A6  v  ($"E@   6   6  A6$    (86@@  (  (8G
+   ( G
+   (AG
+   6  A: 6  A6   Aj6$    (A @   1    (A @     ("      ( (    A: 5@   (G
+   A: 4@  ("E@  A6$   6   6 AG
+  (0AF
+  F@  ("AF@   6 !  (0AG
+ AF
+    ($Aj6$  A: 6    ( @@  (G
+  (AF
+   6@   (  @@ ( G@  (G
+ AG
+ A6   6 @ (,AF
+  A ;4  ("    A   ( (  - 5AF@ A6, - 4E
+ A6,  6  ((Aj6( ($AG
+ (AG
+ A: 6  ("       ( ( §    ( @@  (G
+  (AF
+   6@   (  E
+ @ ( G@  (G
+ AG
+ A6   6  6   ((Aj6(@ ($AG
+  (AG
+  A: 6 A6,7    ( @      ("        ( (     ( @     AÑ Aõ Aà1  AÔ"6   (Ak" (Ak"6 A H@      '     (   $  # Î A§%s:%d: %s vector /emsdk/emscripten/system/lib/libcxxabi/src/private_typeinfo.cpp std::exception bad_array_new_length std::bad_alloc catching a class without an object? A°	×            ù¢ DNn ü) ÑW' Ý4õ bÛÀ < AC cQþ »Þ« ·aÅ :n$ ÒMB Ià 	ê. Ñ ëþ )± è>§ õ5 D». é ´&p A~_ Ö9 S9 ô9 _ (ù½ ø; Þÿ  /ï 
+Z mm Ï~6 	Ë' FO· f? -ê_ º'u åëÇ ={ñ ÷9 R ûkê ±_ ] 0V {üF ð«k  ¼Ï 6ô ã© ^a æ e  _ @h Øÿ 'sM 1 ÊV É¨s {â` kÀ ÄG ÍgÃ 	èÜ Y* vÄ ¦ D¯Ý WÑ ¥> ÿ 3~? Â2è OÞ »}2 &=Ã kï ø^ 5: òÊ ñ |! j$| Õnú 0-w ;C µÆ Ã ­ÄÂ ,MA  ] }F ãq- Æ 3b  ´Ò| ´§ 7UÕ ×>ö £ Mvü d* p×« c|ø z°W ç ÀIV ;ÖÙ §8 $#Ë Öw ZT#  ¹ ñ
+ Îß 1ÿ fj Wa ¬ûG ~Ø "e· 2è æ¿` ïÄÍ l6	 ]?Ô Þ× X;Þ Þ Ò"( (è âXM ÆÊ2 ã à}Ë ÀP ó§ à[ .4 b H õ[ ­° éò HJC gÓ ªÝØ ®_B jaÎ 
+(¤ Ó´ ¦ò \w £Â a< sx ¯Z o×½ -¦c ô¿Ë ï &Ág UÊE ÊÙ6 (¨Ò Âa Éw & F ÄYÄ ÈÅD M²  ó ÔC­ )Iå ýÕ  ¾ü Ì pÎî >õ ìñ ³çÃ Çø(  Áq> .	³ Eó  « { .µ GÂ {2/ Um r§ kç 1Ë yJ Ayâ ôß è âæ 1 ík __6 »ý H´ g¤l qrB ]2 ¸ ¼å	 1% ÷t9 0 
+ Kh ,îX Gª tç ½Ö$ ÷}¦ nHr ï ¦ ´ö ÑSQ Ï
+ò  3 õK~ ²ch Ý>_ @]  UR) 7dÀ mØ 2H2 [Lu NqÔ ETn 	Á *õi fÕ ' ]P ´;Û êvÅ ù Ik} 'º i) ÆÌ¬ ­T âj Ù ,rP ¤¾ w ó0p  ü' êq¨ fÂI dà= Ý £? Cý 
+ 1AÞ 9 Ýp ·ç ß; 7+ \  Z  èØ l¯ ÛÿK 8 Yv b¥ aË» Ç¹ @½ Òò Iu' ë¶ö Û"» 
+ª &/ dv 	;3  Q:ª £Â ¯í® \& mÂM -z ÀV ? 	ðö +@ m1 9´   ØÃ[ õÄ Æ­K NÊ¥ §7Í æ©6 « ÝBh cÞ vï hR üÛ7 ®¡« ß1  ®¡ ûÚ dMf í· )e0 WV¿ Gÿ: jù¹ u¾ó (ß «0 fö Ë ú" Ùä =³¤ W 6Í	 NBé ¾¤ 3#µ ðª Oe¨ ÒÁ¥ ? [xÍ #ùv { r Æ¦S onâ ïë  JX ÄÚ· ªfº vÏÏ Ñ ±ñ- Á Ã­w HÚ ÷]  Æô ¬ð/ Ýì ?\¼ ÐÞm Ç *Û¶ £%:  ¯ ­S ¶W )-´ K~ Ú§ vª {Y¡ * Ü·- úåý Ûþ ¾ý ävl ©ü >p n ýÿ (> ag3 * M½ê ³ç¯ mn g9 1¿[ ×H 0ß Ç-C %a5 ÉpÎ 0Ë¸ ¿lý ¤ ¢ lä ZÝ  !oG bÒ ¹\ paI kVà R PU7 Õ· 3ñÄ n_ ]0ä .© ²Ã ¡26 ·¤ ê±Ô ÷! iä 'ÿw  @- OÍ   ¥ ³¢Ó /]
+ ´ùB ÚË }¾Ð ÛÁ «½ Ê¢ j\ .U ' U ð á d A ¾Þ Úý* k%¶ {4 óþ ¹¿ hjO J*¨ OÄZ -ø¼ ×Z ôÇ 
+M  :¦ ¤W_ ?± 8 Ì  qÝ ÉÞ¶ ¿`õ Me k °¬ ²ÀÐ QUH û rÃ £; À@5 Ü{ àEÌ N)ú ÖÊÈ èóA |dÞ dØ Ù¾1 ¤Ã wXÔ iãÅ ðÚ º:< FF Uu_ Ò½õ nÆ ¬.] Dí >B aÄ )ýé çÖó "|Ê o5 àÅ ÿ× njâ °ýÆ Á |]t k­² Ín >r{ Æj ÷Ï© )sß µÉº · Q â²
+ tº$ å}` tØ 
+,  ~f ) zv ýý¾ VEï Ù~6 ìÙ º¹ Äü 1¨' ñnÃ Å6 Ø¨V ´¨µ ÏÌ - oW4 ,V Îã Ö ¹ k^ª >* _Ì ýJ áôû ;m â, éÔ ü´© ïîÑ .5É /9a 8!D ÙÈ ü
+ ûJj /Ø S´ N T"Ì *UÜ ÀÆÖ  p¸ id &Z` ?Rî  ôµ üËõ 4¼- 4¼î è]Ì Ý^` g 3ï É¸ aX áW¼ QÆ Ø> ÝqH -Ý ¯¡ !,F Yó× Ùz TÀ Oú Vü åy® "6 8­" gÜ Uèª &8 Êç Q
+¤ 3± ©× iH e²ð § L ùÑ6 !³ {J Ï! @Ü ÜGU át: gëB þß ^Ô_ {g¤ º¬z Uö¢ +# AºU Yn !* 9G ãæ åÔ Iû@ ÿVé Ê ÅY ú+ ÓÁÅ ÅÏ ÛZ® GÅ Cb !; ,y a *L{ , C¿ & x< ¨Ää åÛ{ Ä:Â &ôê ÷g 
+¿ e£+ =± ½| ¤QÜ 'Ýc iáÝ  ¨) hÎ( 	í´ D  NÊ pc ~|# ¹2 §õ Vç !ñ µ* o~M ¥Q µù« ßÖ Ýa 6 Ä: ¢¡ rím 9z ¸© k2\ F'[  4í Ò w üôU YM àq A±@û!ù?    -Dt>   Fø<   `QÌx;   ð9   @ %z8   "ã6    ói5`  Ü  °  N10__cxxabiv116__shim_type_infoE    `    Ð  N10__cxxabiv117__class_type_infoE          	   
+         
+                  	            
+            `       N10__cxxabiv120__si_class_type_infoE                       $               ð           8  ø  St9exception    `    ð  St9bad_alloc    `  0    St20bad_array_new_length        `           `  l  ð  St11logic_error                `    `  St12length_error    8  ¸  St9type_info AÈ# 
+
+--- webassembly/style.css ---
+﻿* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+body {
+    font-family: "Segoe UI", Arial, sans-serif;
+    color: #f5f3ef;
+    background: radial-gradient(circle at 30% 20%, rgba(255, 185, 90, 0.25), transparent 55%),
+                radial-gradient(circle at 70% 80%, rgba(255, 80, 20, 0.15), transparent 60%),
+                #050404;
+    overflow: hidden;
+    min-height: 100vh;
+}
+
+canvas#fractal {
+    position: fixed;
+    inset: 0;
+    width: 100vw;
+    height: 100vh;
+    filter: contrast(105%) saturate(115%);
+    opacity: 0.93;
+}
+
+.overlay {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    min-height: 100vh;
+    padding: 6vmin 8vmin;
+    background: linear-gradient(180deg, rgba(5, 4, 4, 0.95) 0%, rgba(5, 4, 4, 0.4) 45%, rgba(5, 4, 4, 0.95) 100%);
+    backdrop-filter: blur(8px);
+}
+
+.hero {
+    max-width: 520px;
+    margin-top: 10vh;
+    line-height: 1.4;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    border-left: 4px solid rgba(255, 142, 66, 0.9);
+    padding-left: 1.5rem;
+}
+
+.hero h1 {
+    font-size: clamp(2.8rem, 5vw, 4.5rem);
+    font-weight: 700;
+    margin-bottom: 1rem;
+}
+
+.hero p {
+    font-size: 1.05rem;
+    text-transform: none;
+    color: rgba(245, 243, 239, 0.85);
+}
+
+.cta {
+    margin-top: 2.5rem;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.75rem;
+    text-decoration: none;
+    color: #050404;
+    background: linear-gradient(135deg, #ffb95a, #ff5014);
+    padding: 0.85rem 1.6rem;
+    font-size: 0.95rem;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    border-radius: 999px;
+    transition: transform 0.25s ease, box-shadow 0.25s ease;
+    box-shadow: 0 12px 28px rgba(255, 122, 10, 0.35);
+}
+
+.cta:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 16px 36px rgba(255, 122, 10, 0.45);
+}
+
+.copy {
+    max-width: 560px;
+    margin-bottom: 8vh;
+    padding-left: 1.5rem;
+    border-left: 1px solid rgba(255, 242, 210, 0.25);
+}
+
+.copy h2 {
+    font-size: 1.2rem;
+    letter-spacing: 0.15em;
+    margin-bottom: 1.2rem;
+}
+
+.copy p {
+    color: rgba(245, 243, 239, 0.78);
+    margin-bottom: 1rem;
+    line-height: 1.7;
+}
+
+@media (max-width: 720px) {
+    .overlay {
+        padding: 4rem 2.5rem;
+    }
+    .hero {
+        margin-top: 5vh;
+    }
+    .copy {
+        margin-bottom: 5vh;
+    }
+}
+
+
+
+--- windows_check_exe/main.cpp ---
+// monitor_chrome.cpp
+#include <windows.h>
+#include <tlhelp32.h>
+#include <cwchar>
+#include <optional>
+#include <chrono>
+#include <iostream>
+#include <string>
+#include <mutex>
+void run_countdown(const std::optional<std::chrono::steady_clock::time_point>& first_seen);
+void update_timer_display(long long seconds_remaining);
+
+// ===================================================================================
+// *** НАЧАЛО БЛОКА КОДА ДЛЯ ПЕРЕХВАТА КЛАВИАТУРЫ ***
+
+// Глобальная переменная для хранения дескриптора хука
+HHOOK g_keyboardHook;
+HANDLE g_hConsole;       // *** ДЕСКРИПТОР КОНСОЛИ ДЛЯ УПРАВЛЕНИЯ КУРСОРОМ ***
+std::mutex g_consoleMutex; // *** МЬЮТЕКС ДЛЯ ЗАЩИТЫ КОНСОЛИ ОТ ОДНОВРЕМЕННОЙ ЗАПИСИ ***
+
+// --- Улучшения производительности и буферизации ---
+DWORD g_zen_pid = 0;              // Кэшированный ID процесса zen.exe. 0 - если не запущен.
+std::wstring g_keyBuffer;         // Буфер для накопления вводимых символов.
+// =====================================================================
+
+
+// *** УЛУЧШЕНИЕ: Функция теперь возвращает ID процесса (PID), а не просто true/false ***
+DWORD get_process_id_by_name(const wchar_t* exe_name) {
+    HANDLE snap = CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0);
+    if (snap == INVALID_HANDLE_VALUE) return 0;
+
+    PROCESSENTRY32W pe{};
+    pe.dwSize = sizeof(pe);
+
+    if (Process32FirstW(snap, &pe)) {
+        do {
+            if (_wcsicmp(pe.szExeFile, exe_name) == 0) {
+                CloseHandle(snap);
+                return pe.th32ProcessID; // Возвращаем ID найденного процесса
+            }
+        } while (Process32NextW(snap, &pe));
+    }
+    CloseHandle(snap);
+    return 0; // Возвращаем 0, если процесс не найден
+}
+
+// Функция для безопасного вывода накопленного буфера
+void flush_key_buffer(bool clear_buffer = true) {
+    std::lock_guard<std::mutex> lock(g_consoleMutex);
+    if (!g_keyBuffer.empty()) {
+        // Используем wcout для корректного вывода Unicode символов
+        std::wcout << L"[zen.exe] Ввод: " << g_keyBuffer << std::endl;
+        if (clear_buffer) {
+            g_keyBuffer.clear();
+        }
+    }
+}
+
+// *** НОВАЯ ФУНКЦИЯ ДЛЯ БЕЗОПАСНОГО ОБНОВЛЕНИЯ ТАЙМЕРА ***
+void update_timer_display(long long seconds_remaining) {
+    // std::lock_guard автоматически блокирует мьютекс и разблокирует его при выходе из функции
+    std::lock_guard<std::mutex> lock(g_consoleMutex);
+
+    // 1. Сохраняем текущую позицию курсора
+    CONSOLE_SCREEN_BUFFER_INFO csbi;
+    GetConsoleScreenBufferInfo(g_hConsole, &csbi);
+
+    // 2. Перемещаем курсор в начало САМОЙ ВЕРХНЕЙ строки (координаты 0, 0)
+    SetConsoleCursorPosition(g_hConsole, {0, 0});
+
+    // 3. Печатаем сообщение таймера. Добавляем пробелы в конце, чтобы стереть
+    //    старые символы, если строка стала короче (например, при переходе с 100 на 99).
+    std::cout << "До истечения 2 минут осталось: " << seconds_remaining << " сек.         ";
+
+    // 4. Возвращаем курсор на его прежнее место
+    SetConsoleCursorPosition(g_hConsole, csbi.dwCursorPosition);
+}
+
+// Функция-обработчик хука, полностью переработанная
+LRESULT CALLBACK KeyboardProc(int nCode, WPARAM wParam, LPARAM lParam) {
+    if (g_zen_pid == 0 || nCode < 0) { // *** ОПТИМИЗАЦИЯ: Если zen.exe не запущен, ничего не делаем
+        return CallNextHookEx(g_keyboardHook, nCode, wParam, lParam);
+    }
+    
+    // Проверяем, что событие пришло от нашего целевого процесса
+    HWND foregroundWindow = GetForegroundWindow();
+    if (foregroundWindow) {
+        DWORD processId;
+        GetWindowThreadProcessId(foregroundWindow, &processId);
+        
+        // *** ОПТИМИЗАЦИЯ: Простое сравнение чисел вместо сканирования всех процессов
+        if (processId != g_zen_pid) {
+            // Если пользователь переключился с окна zen.exe на другое,
+            // выведем накопленный текст.
+            flush_key_buffer();
+            return CallNextHookEx(g_keyboardHook, nCode, wParam, lParam);
+        }
+    }
+
+    if (wParam == WM_KEYDOWN || wParam == WM_SYSKEYDOWN) {
+        KBDLLHOOKSTRUCT* pKeyBoard = (KBDLLHOOKSTRUCT*)lParam;
+        DWORD vkCode = pKeyBoard->vkCode;
+
+        // --- Обработка специальных клавиш ---
+        if (vkCode == VK_RETURN) { // Клавиша Enter
+            flush_key_buffer();
+        } else if (vkCode == VK_BACK) { // Клавиша Backspace
+            if (!g_keyBuffer.empty()) {
+                g_keyBuffer.pop_back();
+            }
+        } else {
+            // --- ПЕРЕВОД КОДА КЛАВИШИ В СИМВОЛ ---
+            wchar_t buffer[5] = {0};
+            BYTE keyboardState[256];
+            GetKeyboardState(keyboardState); // Получаем состояние всех клавиш (Shift, Ctrl и т.д.)
+            
+            // Преобразуем код клавиши в Unicode символ с учетом раскладки и Shift
+            int result = ToUnicode(vkCode, pKeyBoard->scanCode, keyboardState, buffer, 4, 0);
+
+            if (result > 0) {
+                // Добавляем полученный символ(ы) в наш буфер
+                g_keyBuffer.append(buffer);
+            }
+        }
+    }
+
+    return CallNextHookEx(g_keyboardHook, nCode, wParam, lParam);
+}
+
+// *** КОНЕЦ БЛОКА КОДА ДЛЯ ПЕРЕХВАТА КЛАВИАТУРЫ ***
+// ===================================================================================
+
+bool is_process_running(const wchar_t* exe_name) {
+    HANDLE snap = CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0); // Создание всех снимков в системе
+    if (snap == INVALID_HANDLE_VALUE) return false; // проверка, удалось ли создать снимок, если нет - возвращаем false
+
+    PROCESSENTRY32W pe{}; // объявление структуры для хранения информации о процессе
+    pe.dwSize = sizeof(pe); // установка размера структуры
+    bool found = false; // переменная-флаг для отслеживания найден ли процесс
+
+
+
+    if (Process32FirstW(snap, &pe)) { // получение информации о первом процессе из снимка
+        do { // начало цикла для перебора всех процессов
+            if (_wcsicmp(pe.szExeFile, exe_name) == 0) { // cравнение имени исполняемого файла с искомым (без учета регистра)
+                found = true; // если нашли нужный процесс, устанавливаем флаг
+                break; // выходим из цикла
+            }
+        } while (Process32NextW(snap, &pe));
+    }
+    CloseHandle(snap); //  закрытие дескриптора снимка процессов
+    return found; // возвращаем результат поиска
+}
+
+int main() {
+    // Настройка для корректного вывода Unicode (кириллицы) в консоль
+    SetConsoleOutputCP(CP_UTF8);
+    // Для wcout может потребоваться дополнительная настройка, но CP_UTF8 часто хватает
+
+    g_hConsole = GetStdHandle(STD_OUTPUT_HANDLE);
+    std::cout << std::endl; // Оставляем место для таймера
+
+    {
+        std::lock_guard<std::mutex> lock(g_consoleMutex);
+        std::cout << "Установка хука и запуск мониторинга..." << std::endl;
+    }
+    g_keyboardHook = SetWindowsHookEx(WH_KEYBOARD_LL, KeyboardProc, GetModuleHandle(NULL), 0);
+    if (g_keyboardHook == NULL) {
+        std::cerr << "Не удалось установить хук!" << std::endl;
+        return 1;
+    }
+
+    using clock = std::chrono::steady_clock;
+    std::optional<clock::time_point> first_seen;
+    bool notified_2min = false;
+
+    while (true) {
+        MSG msg;
+        if (PeekMessage(&msg, NULL, 0, 0, PM_REMOVE)) {
+            TranslateMessage(&msg);
+            DispatchMessage(&msg);
+        }
+
+        // *** ОПТИМИЗАЦИЯ: Получаем PID и кэшируем его в глобальную переменную ***
+        DWORD current_pid = get_process_id_by_name(L"zen.exe");
+        g_zen_pid = current_pid;
+
+        if (current_pid != 0) { // Проверяем, запущен ли процесс
+            if (!first_seen) {
+                first_seen = clock::now();
+                notified_2min = false;
+                {
+                    std::lock_guard<std::mutex> lock(g_consoleMutex);
+                    std::cout << "zen.exe запущен (PID: " << current_pid << ").\n";
+                }
+            } else {
+                auto elapsed = clock::now() - *first_seen;
+                auto elapsed_seconds = std::chrono::duration_cast<std::chrono::seconds>(elapsed).count();
+                long long seconds_remaining = 120 - elapsed_seconds;
+
+                if (seconds_remaining >= 0) {
+                    update_timer_display(seconds_remaining);
+                }
+                
+                if (!notified_2min && elapsed >= std::chrono::minutes(2)) {
+                    {
+                        std::lock_guard<std::mutex> lock(g_consoleMutex);
+                        update_timer_display(-1); // Очищаем строку таймера
+                        std::cout << "\nzen.exe открыт 2 минуты — другое сообщение.\n";
+                    }
+                    notified_2min = true;
+                }
+            }
+        } else { // Процесс не запущен
+            if (first_seen) {
+                // Если процесс только что был закрыт, выводим остатки из буфера
+                flush_key_buffer();
+                first_seen.reset();
+                notified_2min = false;
+                {
+                    std::lock_guard<std::mutex> lock(g_consoleMutex);
+                    update_timer_display(-1); // Очищаем таймер
+                    std::cout << "\nzen.exe закрыт. Состояние сброшено." << std::endl;
+                }
+            }
+        }
+        Sleep(250); // Можно увеличить задержку, т.к. хук работает независимо
+    }
+    
+    UnhookWindowsHookEx(g_keyboardHook);
+    return 0;
+}
+
+void run_countdown(const std::optional<std::chrono::steady_clock::time_point>& first_seen) {
+    using clock = std::chrono::steady_clock;
+    if (!first_seen) {
+        return;
+    }
+    auto elapsed = clock::now() - *first_seen;
+    auto elapsed_seconds = std::chrono::duration_cast<std::chrono::seconds>(elapsed).count();
+    long long seconds_remaining = 120 - elapsed_seconds;
+    if (seconds_remaining >= 0) {
+        std::cout << "До истечения 2 минут осталось: " << seconds_remaining << " сек. \r";
+    }
+}
+
+// =========================================================================================
+// ОБЪЯСНЕНИЕ АРГУМЕНТА ФУНКЦИИ В ВИДЕ КОДА С КОММЕНТАРИЯМИ
+//
+// Давайте разберем эту запись по частям, от самой внутренней к внешней:
+// void run_countdown(const std::optional<std::chrono::steady_clock::time_point>& first_seen)
+// =========================================================================================
+
+// 1. std::chrono::steady_clock::time_point — ТИП ДАННЫХ
+//    - Что это? Это переменная, которая хранит точный "момент во времени",
+//      зафиксированный по надежным внутренним часам компьютера.
+//    - steady_clock гарантирует, что часы не "прыгнут" назад и идут с постоянной скоростью,
+//      что идеально для измерения интервалов.
+
+// 2. std::optional< ... > — "ОБЕРТКА" НАД ТИПОМ
+//    - Что это? Контейнер, который может либо содержать значение (в нашем случае time_point),
+//      либо быть "пустым".
+//    - Зачем? Это позволяет нам иметь переменную, которая получает значение не сразу,
+//      а только когда процесс впервые будет обнаружен. До этого момента она пуста.
+
+// 3. const ... & — СПОСОБ ПЕРЕДАЧИ АРГУМЕНТА
+//    Это самая важная часть. Состоит из двух символов:
+//
+//    - '&' (Амперсанд) — ПЕРЕДАЧА ПО ССЫЛКЕ
+//      - Что значит? Мы не создаем тяжелую КОПИЮ переменной. Вместо этого мы передаем
+//        в функцию "адрес" или "указатель" на ОРИГИНАЛЬНУЮ переменную из main.
+//      - Зачем? Это очень быстро и экономит память. Функция работает напрямую
+//        с оригиналом.
+//
+//    - 'const' (Ключевое слово) — ГАРАНТИЯ НЕИЗМЕННОСТИ
+//      - Что значит? Это обещание компилятору, что функция НЕ БУДЕТ ИЗМЕНЯТЬ
+//        переданную переменную. Она может ее только ЧИТАТЬ.
+//      - Зачем? Это делает код безопаснее. Если вы случайно попытаетесь изменить
+//        first_seen внутри этой функции, компилятор выдаст ошибку.
+
+// 4. first_seen — ИМЯ АРГУМЕНТА
+//    - Это просто имя, под которым переменная будет доступна внутри функции run_countdown.
+
+
+// ИТОГ:
+// Вся эта сложная на вид запись означает простую вещь:
+// "Функция run_countdown принимает для ЧТЕНИЯ (const) ОРИГИНАЛ (&) переменной first_seen,
+// которая может быть ПУСТОЙ (optional) или содержать в себе ВРЕМЯ (time_point)".
+
+============================================================
+# Total files processed: 36
+# Total size: 91KB
+# Total tokens: 40726
