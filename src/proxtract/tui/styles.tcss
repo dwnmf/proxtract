@@ -1,0 +1,64 @@
+Screen#main {
+    layout: vertical;
+    padding: 1 2;
+    background: $surface;
+    color: $text;
+}
+
+#title {
+    text-style: bold;
+    padding-bottom: 1;
+    border-bottom: solid $primary;
+}
+
+#content {
+    layout: horizontal;
+}
+
+#settings-list, #actions-list {
+    border: solid $accent 20%;
+    height: 24;
+    width: 48;
+    scrollbar-size: 1 1;
+}
+
+#summary-header {
+    margin-top: 1;
+    text-style: bold;
+}
+
+SummaryDisplay {
+    margin-top: 1;
+}
+
+/* Edit setting modal */
+#edit-container {
+    layout: vertical;
+    padding: 2;
+    width: 60;
+    border: heavy $accent;
+    background: $boost;
+}
+
+#edit-buttons {
+    layout: horizontal;
+    align-horizontal: right;
+}
+
+/* Extraction modal */
+#extract-container {
+    layout: vertical;
+    padding: 2;
+    width: 80;
+    border: heavy $accent;
+    background: $boost;
+}
+
+#extract-buttons {
+    layout: horizontal;
+    align-horizontal: right;
+}
+
+#extract-progress {
+    height: 1;
+}

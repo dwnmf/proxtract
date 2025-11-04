@@ -1,20 +1,16 @@
-"""Entry point for launching the Proxtract CLI."""
+"""Entry point for launching the Proxtract CLI and TUI."""
 
 from __future__ import annotations
 
 import argparse
+import sys
 from pathlib import Path
-from typing import Optional
+from typing import Optional, Sequence
 
 from rich.console import Console
 
-try:  # art is optional at runtime; fall back gracefully if missing
-    from art import text2art as _text2art
-except Exception:  # pragma: no cover - fallback path depends on environment
-    _text2art = None
-
-from .repl import start_session
 from .state import AppState
+from .tui.app import ProxtractApp
 
 try:  # Config helpers are optional if tomllib/tomli missing
     from .config import apply_config, load_config, save_config as _save_config
@@ -22,28 +18,6 @@ except Exception:  # pragma: no cover - fallback when persistence unavailable
     apply_config = lambda state, data: state  # type: ignore
     load_config = lambda: {}  # type: ignore
     _save_config = None  # type: ignore
-
-
-def _render_banner(console: Console) -> None:
-    banner: Optional[str] = None
-    if _text2art is not None:
-        try:
-            banner = _text2art("Proxtract", font="small")
-        except Exception:  # pragma: no cover - fallback for unexpected art errors
-            banner = None
-
-    if banner is None:
-        banner = r"""\
-  ____                 _                _     
- |  _ \ ___  _____  __| | ___ _ __ __ _| |__  
- | |_) / _ \/ _ \ \/ / _` |/ _ \ '__/ _` | '_ \ 
- |  __/  __/  __/>  < (_| |  __/ | | (_| | |_) |
- |_|   \___|\___/_/\_\__,_|\___|_|  \__,_|_.__/ 
-"""
-
-    console.print(f"[bold magenta]{banner}[/bold magenta]")
-
-
 def _run_cli_extract(args: argparse.Namespace, console: Console) -> int:
     state = apply_config(AppState(), load_config())
 
@@ -118,9 +92,12 @@ def _run_cli_extract(args: argparse.Namespace, console: Console) -> int:
     return 0
 
 
-def main() -> None:
-    console = Console()
+def _launch_tui() -> None:
+    state = apply_config(AppState(), load_config())
+    ProxtractApp(state).run()
 
+
+def main(argv: Optional[Sequence[str]] = None) -> None:
     parser = argparse.ArgumentParser(prog="proxtract")
     subparsers = parser.add_subparsers(dest="command")
 
@@ -144,15 +121,18 @@ def main() -> None:
     p_extract.add_argument("--copy", action="store_true", help="Copy result to clipboard")
     p_extract.add_argument("--save-config", action="store_true", help="Persist current settings")
 
-    args = parser.parse_args()
+    args_list = list(sys.argv[1:] if argv is None else argv)
+
+    if not args_list:
+        _launch_tui()
+        return
+
+    args = parser.parse_args(args_list)
 
     if args.command == "extract":
-        raise SystemExit(_run_cli_extract(args, console))
+        raise SystemExit(_run_cli_extract(args, Console()))
 
-    _render_banner(console)
-    console.print("[bold green]Welcome to Proxtract! Type /help to view available commands.[/bold green]")
-    state = apply_config(AppState(), load_config())
-    start_session(console=console, state=state)
+    _launch_tui()
 
 
 if __name__ == "__main__":  # pragma: no cover

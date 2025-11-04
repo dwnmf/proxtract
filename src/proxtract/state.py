@@ -1,4 +1,4 @@
-"""Session state management for the Proxtract REPL and CLI."""
+"""Session state management for the Proxtract TUI and CLI."""
 
 from __future__ import annotations
 
@@ -11,7 +11,7 @@ from .core import ExtractionStats, FileExtractor
 
 @dataclass
 class AppState:
-    """Mutable configuration shared across REPL commands."""
+    """Mutable configuration shared across TUI widgets and CLI commands."""
 
     output_path: Path = field(default_factory=lambda: Path("extracted.txt"))
     max_size_kb: int = 500

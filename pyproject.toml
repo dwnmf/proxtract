@@ -27,7 +27,7 @@ classifiers = [
 ]
 dependencies = [
     "rich>=13.7.0",
-    "prompt_toolkit>=3.0.39"
+    "textual>=0.60"
 ]
 
 [project.scripts]
@@ -53,3 +53,6 @@ dev = [
 
 [tool.setuptools.packages.find]
 where = ["src"]
+
+[tool.setuptools]
+include-package-data = true
