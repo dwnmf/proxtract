@@ -2,7 +2,7 @@
 # Max file size: 500KB
 # Mode: compact
 ============================================================
-# Gitignore: on
+# Gitignore: off
 
 --- LAB_RAB_CYCLE/THE_FIRST/drobi/main.cpp ---
 #include <iostream>
@@ -2898,4 +2898,3 @@ void run_countdown(const std::optional<std::chrono::steady_clock::time_point>& f
 ============================================================
 # Total files processed: 36
 # Total size: 91KB
-# Total tokens: 40726

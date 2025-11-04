@@ -185,18 +185,18 @@ class ExtractScreen(ModalScreen[ExtractionStats | None]):
             self.post_message, self.ExtractionCompleted(stats)
         )
 
-    def on_extraction_started(self, message: ExtractionStarted) -> None:
+    def on_extract_screen_extraction_started(self, message: ExtractionStarted) -> None:
         if self._progress_bar is not None:
             self._progress_bar.update(progress=0, total=message.total)
         self._update_status("Scanning files...")
 
-    def on_extraction_progress(self, message: ExtractionProgress) -> None:
+    def on_extract_screen_extraction_progress(self, message: ExtractionProgress) -> None:
         if self._progress_bar is not None:
             self._progress_bar.update(progress=message.processed, total=message.total)
         if message.description:
             self._update_status(f"Processing {message.description}")
 
-    def on_extraction_failed(self, message: ExtractionFailed) -> None:
+    def on_extract_screen_extraction_failed(self, message: ExtractionFailed) -> None:
         if self._progress_bar is not None:
             self._progress_bar.display = False
         if self._start_button is not None:
@@ -204,7 +204,7 @@ class ExtractScreen(ModalScreen[ExtractionStats | None]):
         self._update_status(f"Error: {message.message}")
         self._worker = None
 
-    def on_extraction_completed(self, message: ExtractionCompleted) -> None:
+    def on_extract_screen_extraction_completed(self, message: ExtractionCompleted) -> None:
         if self._progress_bar is not None:
             self._progress_bar.display = False
         if self._start_button is not None:
