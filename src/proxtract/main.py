@@ -110,6 +110,7 @@ def main(argv: Optional[Sequence[str]] = None) -> None:
     subparsers = parser.add_subparsers(dest="command")
 
     p_extract = subparsers.add_parser("extract", help="Run a one-off extraction", aliases=["e"])
+    p_extract.set_defaults(command="extract")
     path_argument = p_extract.add_argument("path", help="Root directory to extract")
     output_argument = p_extract.add_argument("--output", "-o", help="Output file path")
     p_extract.add_argument("--max-size", type=int, help="Maximum file size in KB")
