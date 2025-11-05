@@ -3,7 +3,7 @@
 Proxtract is an interactive CLI for extracting readable project files into a single bundle that is easy to share with large language models.
 
 ## Features
-- Rich-powered REPL with colorized output, tables, and progress indicators
+- Rich-powered TUI with colorized output, tables, and progress indicators
 - Session state for configurable extraction settings
 - Command suite for quick extraction, configuration, and help
 
@@ -21,7 +21,7 @@ pip install proxtract[banner]
 
 ## Usage
 
-Launch the REPL with:
+Launch the TUI with:
 
 ```bash
 proxtract
@@ -67,13 +67,13 @@ After installing, you can confirm the basics operate with the bundled smoke test
 python scripts/smoke_test.py
 ```
 
-The script launches the REPL (and exits cleanly) and performs a one-file extraction using the public API.
+The script launches the TUI (and exits cleanly) and performs a one-file extraction using the public API.
 
 ## Development
 - Python 3.9+
 - Dependencies managed via `pyproject.toml`
 
-Run the REPL locally without installing by executing `python -m proxtract` from the project root. The banner gracefully falls back to ASCII art if the optional `art` dependency is unavailable.
+Run the TUI locally without installing by executing `python -m proxtract` from the project root. The banner gracefully falls back to ASCII art if the optional `art` dependency is unavailable.
 
 For editable development installs, use:
 

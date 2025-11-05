@@ -50,11 +50,11 @@ class ExtractionStats:
         """Backward compatible summary of skipped files by reason."""
 
         counts: Dict[str, int] = {}
-        canonical_reasons = {"excluded_ext", "empty", "too_large", "binary", "other"}
+        canonical_reasons = {"excluded_ext", "empty", "too_large", "binary", "excluded_name", "excluded_path", "excluded_pattern", "gitignore", "not_included", "other"}
         for reason, paths in self.skipped_paths.items():
             key = reason if reason in canonical_reasons else "other"
             counts[key] = counts.get(key, 0) + len(paths)
-        for key in ("excluded_ext", "empty", "too_large", "binary", "other"):
+        for key in ("excluded_ext", "empty", "too_large", "binary", "excluded_name", "excluded_path", "excluded_pattern", "gitignore", "not_included", "other"):
             counts.setdefault(key, 0)
         return counts
 
@@ -91,6 +91,10 @@ class FileExtractor:
         exclude_patterns: Optional[Iterable[str]] = None,
         tokenizer_model: Optional[str] = None,
         count_tokens: bool = False,
+        # Configurable filtering rules
+        skip_extensions: Optional[Iterable[str]] = None,
+        skip_patterns: Optional[Iterable[str]] = None,
+        skip_files: Optional[Iterable[str]] = None,
     ) -> None:
         self.max_file_size = max_file_size_kb * 1024
         self.skip_empty = skip_empty
@@ -101,104 +105,34 @@ class FileExtractor:
         self.tokenizer_model = tokenizer_model
         self.count_tokens = count_tokens
 
-        self.skip_extensions = {
-            ".csv",
-            ".jpeg",
-            ".jpg",
-            ".png",
-            ".gif",
-            ".bmp",
-            ".gitignore",
-            ".env",
-            ".mp4",
-            ".lgb",
-            ".sqlite3-wal",
-            ".sqlite3-shm",
-            ".sqlite3",
-            ".mkv",
-            ".webm",
-            ".mp3",
-            ".wav",
-            ".flac",
-            ".aac",
-            ".html",
-            ".wma",
-            ".ico",
-            ".svg",
-            ".zip",
-            ".rar",
-            ".7z",
-            ".tar",
-            ".gz",
-            ".bz2",
-            ".lock",
-            ".exe",
-            ".dll",
-            ".so",
-            ".dylib",
-            ".pdf",
-            ".doc",
-            ".docx",
-            ".xls",
-            ".xlsx",
-            ".ppt",
-            ".pptx",
-            ".pyc",
-            ".pyo",
-            ".pyd",
-            ".pkl",
-            ".parquet",
-            ".orc",
-            ".avro",
-            ".feather",
-            ".h5",
-            ".hdf5",
-            ".db",
-            ".sqlite",
-            ".bin",
-            ".dat",
-            ".idx",
-            ".model",
-            ".pt",
-            ".ckpt",
-            ".npy",
-            ".npz",
-            ".woff",
-            ".woff2",
-            ".ttf",
-            ".eot",
+        # Default filtering rules
+        default_extensions = {
+            ".csv", ".jpeg", ".jpg", ".png", ".gif", ".bmp", ".gitignore", ".env",
+            ".mp4", ".lgb", ".sqlite3-wal", ".sqlite3-shm", ".sqlite3", ".mkv",
+            ".webm", ".mp3", ".wav", ".flac", ".aac", ".html", ".wma", ".ico",
+            ".svg", ".zip", ".rar", ".7z", ".tar", ".gz", ".bz2", ".lock",
+            ".exe", ".dll", ".so", ".dylib", ".pdf", ".doc", ".docx", ".xls",
+            ".xlsx", ".ppt", ".pptx", ".pyc", ".pyo", ".pyd", ".pkl", ".parquet",
+            ".orc", ".avro", ".feather", ".h5", ".hdf5", ".db", ".sqlite", ".bin",
+            ".dat", ".idx", ".model", ".pt", ".ckpt", ".npy", ".npz", ".woff",
+            ".woff2", ".ttf", ".eot"
         }
 
-        self.skip_patterns = {
-            "__pycache__",
-            ".git",
-            ".svn",
-            ".hg",
-            "node_modules",
-            ".vscode",
-            ".idea",
-            ".pytest_cache",
-            ".mypy_cache",
-            "venv",
-            "env",
-            "virtualenv",
-            "dist",
-            "build",
-            ".next",
-            "coverage",
-            ".nyc_output",
-            "vendor",
+        default_patterns = {
+            "__pycache__", ".git", ".svn", ".hg", "node_modules", ".vscode",
+            ".idea", ".pytest_cache", ".mypy_cache", "venv", "env", "virtualenv",
+            "dist", "build", ".next", "coverage", ".nyc_output", "vendor"
         }
 
-        self.skip_files = {
-            "package-lock.json",
-            "yarn.lock",
-            "poetry.lock",
-            "Pipfile.lock",
-            ".DS_Store",
-            "Thumbs.db",
-            "desktop.ini",
+        default_files = {
+            "package-lock.json", "yarn.lock", "poetry.lock", "Pipfile.lock",
+            ".DS_Store", "Thumbs.db", "desktop.ini"
         }
+
+        # Use provided rules or fall back to defaults
+        self.skip_extensions = set(skip_extensions) if skip_extensions else default_extensions
+        self.skip_patterns = set(skip_patterns) if skip_patterns else default_patterns
+        self.skip_files = set(skip_files) if skip_files else default_files
 
         self._root_path: Optional[Path] = None
         self._gitignore_spec = None
@@ -233,6 +167,11 @@ class FileExtractor:
             if file_path.suffix.lower() in self.skip_extensions:
                 return True, "excluded_ext"
 
+            # Check if filename matches any skip patterns
+            rel = self._rel(file_path)
+            if self._match_any(self.skip_patterns, rel):
+                return True, "excluded_path"
+
             for part in file_path.parts:
                 if part in self.skip_patterns or part.startswith("."):
                     return True, "excluded_path"
@@ -252,14 +191,85 @@ class FileExtractor:
 
     @staticmethod
     def _is_text_file(file_path: Path) -> bool:
-        encodings = ["utf-8", "cp1251", "latin-1"]
+        """Enhanced text file detection with binary detection."""
+        # Check file size first - very small files are often text
+        try:
+            size = file_path.stat().st_size
+        except OSError:
+            return False
+            
+        if size == 0:
+            return True
+            
+        # Read a reasonable chunk for analysis (limit to 8192 bytes)
+        max_bytes = min(size, 8192)
+        
+        try:
+            with open(file_path, "rb") as handle:
+                data = handle.read(max_bytes)
+        except (PermissionError, OSError):
+            return False
+            
+        # Check for common binary file signatures (magic bytes)
+        binary_signatures = {
+            # Images
+            b'\x89PNG': '.png',
+            b'\xff\xd8\xff': '.jpg',
+            b'GIF8': '.gif',
+            b'RIFF': '.webp',  # may be webp or other RIFF-based format
+            # Archives
+            b'PK\x03\x04': '.zip',
+            b'PK\x05\x06': '.zip',  # empty zip
+            b'PK\x07\x08': '.zip',  # spanned zip
+            b'RARF': '.rar',
+            b'7z\xbc\xaf\x27\x1c': '.7z',
+            b'\x1f\x8b': '.gz',
+            b'BZh': '.bz2',
+            # Documents
+            b'%PDF': '.pdf',
+            b'\xd0\xcf\x11\xe0': '.doc',  # MS Office
+            b'PK\x03\x04': '.docx',  # OOXML
+            # Audio/Video
+            b'fLaC': '.flac',
+            b'ID3': '.mp3',  # MP3 with ID3
+            b'OggS': '.ogg',
+            # Executables
+            b'MZ': '.exe',
+            b'\x7fELF': '.elf',
+            # Database files
+            b'SQLite': '.sqlite',
+            b'\x00\x00\x00\x20ftyp': '.mp4',  # MP4/M4A
+        }
+        
+        # Check for magic bytes
+        for signature in binary_signatures:
+            if data.startswith(signature):
+                return False
+                
+        # Check for null bytes (strong indicator of binary content)
+        # But allow null bytes in specific file types that might contain them
+        if b'\x00' in data:
+            # Additional check: if file is mostly null bytes, it's definitely binary
+            null_ratio = data.count(b'\x00') / len(data)
+            if null_ratio > 0.1:  # More than 10% null bytes
+                return False
+                
+        # Try to decode as text with different encodings
+        encodings = ["utf-8", "utf-8-sig", "cp1252", "latin-1", "cp1251"]
         for encoding in encodings:
             try:
-                with open(file_path, "r", encoding=encoding) as handle:
-                    handle.read(2048)
+                decoded = data.decode(encoding)
+                # Additional check: if decoded content contains too many control
+                # characters (except common ones like \n, \r, \t), it might be binary
+                import string
+                control_chars = sum(1 for c in decoded if c not in string.printable and c not in '\n\r\t')
+                control_ratio = control_chars / len(decoded) if decoded else 0
+                if control_ratio > 0.1:  # More than 10% control characters
+                    continue
                 return True
-            except (UnicodeDecodeError, PermissionError):
+            except UnicodeDecodeError:
                 continue
+                
         return False
 
     @staticmethod
