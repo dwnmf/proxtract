@@ -14,6 +14,7 @@ from textual.widgets import Footer, Header, Label, ListView
 
 from ...core import ExtractionStats
 from ...state import AppState
+from ...utils import normalize_bool
 from ..widgets import ActionItem, SettingItem, SettingMetadata, SummaryDisplay
 from .edit_setting_screen import EditSettingScreen
 from .extract_screen import ExtractScreen
@@ -147,7 +148,8 @@ class MainScreen(Screen):
             return
 
         spec = self._spec_by_attr(attr)
-        parsed = self._parse_value(raw_value, spec.setting_type)
+        current_value = getattr(self.app_state, attr, None)
+        parsed = self._parse_value(raw_value, spec.setting_type, default=current_value)
         setattr(self.app_state, attr, parsed)
 
         item = self._items.get(attr)
@@ -189,6 +191,13 @@ class MainScreen(Screen):
                 attr="use_gitignore",
                 label="Respect .gitignore",
                 description="Honor .gitignore patterns when scanning directories.",
+                setting_type="bool",
+                formatter=self._format_bool,
+            ),
+            SettingSpec(
+                attr="force_include",
+                label="Force Include Priority",
+                description="When enabled, include patterns bypass excludes and .gitignore.",
                 setting_type="bool",
                 formatter=self._format_bool,
             ),
@@ -252,15 +261,15 @@ class MainScreen(Screen):
         return str(value)
 
     @staticmethod
-    def _parse_value(value: str, setting_type: str) -> Any:
+    def _parse_value(value: str, setting_type: str, *, default: Any = None) -> Any:
         if setting_type == "int":
             return int(value)
         if setting_type == "list":
             parts = [part.strip() for part in value.split(",")]
             return [part for part in parts if part]
         if setting_type == "bool":
-            lowered = value.strip().lower()
-            return lowered in {"1", "true", "yes", "on"}
+            fallback = bool(default) if isinstance(default, bool) else False
+            return normalize_bool(value, fallback)
         if setting_type == "path":
             from pathlib import Path
 

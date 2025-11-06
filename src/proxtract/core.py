@@ -7,6 +7,8 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Callable, DefaultDict, Dict, Iterable, Optional, Protocol
 import fnmatch
+import os
+import tempfile
 
 try:  # Optional dependency for .gitignore support
     import pathspec as _pathspec  # type: ignore
@@ -49,19 +51,30 @@ class ExtractionStats:
     def skipped(self) -> Dict[str, int]:
         """Backward compatible summary of skipped files by reason."""
 
-        counts: Dict[str, int] = {}
-        canonical_reasons = {"excluded_ext", "empty", "too_large", "binary", "excluded_name", "excluded_path", "excluded_pattern", "gitignore", "not_included", "other"}
+        counts: DefaultDict[str, int] = defaultdict(int)
+        canonical_reasons = {
+            "excluded_ext",
+            "empty",
+            "too_large",
+            "binary",
+            "excluded_name",
+            "excluded_path",
+            "excluded_pattern",
+            "gitignore",
+            "not_included",
+            "other",
+        }
         for reason, paths in self.skipped_paths.items():
             key = reason if reason in canonical_reasons else "other"
-            counts[key] = counts.get(key, 0) + len(paths)
-        for key in ("excluded_ext", "empty", "too_large", "binary", "excluded_name", "excluded_path", "excluded_pattern", "gitignore", "not_included", "other"):
-            counts.setdefault(key, 0)
+            count = len(paths)
+            if count:
+                counts[key] = counts.get(key, 0) + count
         return counts
 
     def as_dict(self) -> Dict[str, object]:
         """Return stats in plain dict form for serialization/logging."""
 
-        return {
+        result = {
             "root": str(self.root),
             "output": str(self.output),
             "processed_paths": list(self.processed_paths),
@@ -71,6 +84,11 @@ class ExtractionStats:
             "skipped": dict(self.skipped),
             "errors": list(self.errors),
         }
+        if self.token_count is not None:
+            result["token_count"] = self.token_count
+        if self.token_model is not None:
+            result["token_model"] = self.token_model
+        return result
 
 
 class ExtractionError(RuntimeError):
@@ -89,6 +107,7 @@ class FileExtractor:
         use_gitignore: bool = False,
         include_patterns: Optional[Iterable[str]] = None,
         exclude_patterns: Optional[Iterable[str]] = None,
+        force_include: bool = False,
         tokenizer_model: Optional[str] = None,
         count_tokens: bool = False,
         # Configurable filtering rules
@@ -102,6 +121,7 @@ class FileExtractor:
         self.use_gitignore = use_gitignore
         self.include_patterns = tuple(include_patterns or ())
         self.exclude_patterns = tuple(exclude_patterns or ())
+        self.force_include = force_include
         self.tokenizer_model = tokenizer_model
         self.count_tokens = count_tokens
 
@@ -129,10 +149,18 @@ class FileExtractor:
             ".DS_Store", "Thumbs.db", "desktop.ini"
         }
 
+        def _coerce_set(values: Iterable[str]) -> set[str]:
+            return {str(entry) for entry in values}
+
+        def _coerce_extensions(values: Iterable[str]) -> set[str]:
+            return {str(entry).lower() for entry in values}
+
         # Use provided rules or fall back to defaults
-        self.skip_extensions = set(skip_extensions) if skip_extensions else default_extensions
-        self.skip_patterns = set(skip_patterns) if skip_patterns else default_patterns
-        self.skip_files = set(skip_files) if skip_files else default_files
+        self.skip_extensions = (
+            _coerce_extensions(default_extensions) if skip_extensions is None else _coerce_extensions(skip_extensions)
+        )
+        self.skip_patterns = _coerce_set(default_patterns) if skip_patterns is None else _coerce_set(skip_patterns)
+        self.skip_files = _coerce_set(default_files) if skip_files is None else _coerce_set(skip_files)
 
         self._root_path: Optional[Path] = None
         self._gitignore_spec = None
@@ -150,11 +178,16 @@ class FileExtractor:
 
     def _should_skip(self, file_path: Path, *, include_override: bool) -> tuple[bool, str]:
         rel = self._rel(file_path)
+        include_forced = include_override and self.force_include
 
-        if self._match_any(self.exclude_patterns, rel):
+        if not include_forced and self._match_any(self.exclude_patterns, rel):
             return True, "excluded_pattern"
 
-        if self._gitignore_spec is not None and self._gitignore_spec.match_file(rel):  # type: ignore[union-attr]
+        if (
+            not include_forced
+            and self._gitignore_spec is not None
+            and self._gitignore_spec.match_file(rel)  # type: ignore[union-attr]
+        ):
             return True, "gitignore"
 
         if self.include_patterns and not include_override:
@@ -261,8 +294,7 @@ class FileExtractor:
                 decoded = data.decode(encoding)
                 # Additional check: if decoded content contains too many control
                 # characters (except common ones like \n, \r, \t), it might be binary
-                import string
-                control_chars = sum(1 for c in decoded if c not in string.printable and c not in '\n\r\t')
+                control_chars = sum(1 for c in decoded if (not c.isprintable()) and c not in '\n\r\t')
                 control_ratio = control_chars / len(decoded) if decoded else 0
                 if control_ratio > 0.1:  # More than 10% control characters
                     continue
@@ -318,6 +350,7 @@ class FileExtractor:
             raise ExtractionError(f"'{root_dir}' is not a valid directory")
 
         output_path = Path(output_file).expanduser().resolve()
+        output_path.parent.mkdir(parents=True, exist_ok=True)
 
         self._root_path = root_path
         self._gitignore_spec = None
@@ -346,8 +379,20 @@ class FileExtractor:
         token_model: Optional[str] = None
         encoder = None
 
+        temp_path: Optional[Path] = None
+        temp_path_resolved: Optional[Path] = None
+
         try:
-            with open(output_path, "w", encoding="utf-8") as destination:
+            with tempfile.NamedTemporaryFile(
+                mode="w",
+                encoding="utf-8",
+                delete=False,
+                dir=str(output_path.parent),
+                prefix=f"{output_path.name}.",
+                suffix=".tmp",
+            ) as destination:
+                temp_path = Path(destination.name)
+                temp_path_resolved = temp_path.resolve()
                 destination.write(f"# Extracted from: {root_path}\n")
                 destination.write(f"# Max file size: {self.max_file_size // 1024}KB\n")
                 destination.write(f"# Mode: {'compact' if self.compact_mode else 'standard'}\n")
@@ -377,12 +422,26 @@ class FileExtractor:
                             errors.append(f"Failed to initialize tokenizer: {exc}")
                             encoder = None
 
+                def report(description: str) -> None:
+                    if progress_callback is None:
+                        return
+                    try:
+                        progress_callback(advance=1, description=description)
+                    except TypeError:
+                        progress_callback(1)  # type: ignore[misc]
+
                 for file_path in sorted(root_path.rglob("*")):
-                    if not file_path.is_file() or file_path.resolve() == output_path:
+                    if not file_path.is_file():
                         continue
 
                     relative_path = file_path.relative_to(root_path)
                     relative_str = str(relative_path)
+
+                    if temp_path_resolved is not None and file_path.resolve() == temp_path_resolved:
+                        continue
+                    if file_path.resolve() == output_path:
+                        report(f"Skipping {relative_str}")
+                        continue
 
                     include_override = False
                     if self.include_patterns:
@@ -393,15 +452,19 @@ class FileExtractor:
                     except ExtractionError as exc:
                         errors.append(str(exc))
                         skipped_paths["other"].append(relative_str)
+                        report(f"Skipping {relative_str}")
                         continue
 
                     if skip:
                         skipped_key = reason or "other"
                         skipped_paths[skipped_key].append(relative_str)
+                        report(f"Skipping {relative_str}")
                         continue
 
                     if not self._is_text_file(file_path):
                         skipped_paths["binary"].append(relative_str)
+                        report(f"Skipping {relative_str}")
+
                         continue
 
                     content = self._read_file_content(file_path)
@@ -418,21 +481,45 @@ class FileExtractor:
                         except Exception:  # pragma: no cover - tokenizer fallback
                             pass
 
-                    if progress_callback is not None:
-                        try:
-                            progress_callback(advance=1, description=relative_str)
-                        except TypeError:
-                            # Fallback for simpler callbacks accepting a single positional argument.
-                            progress_callback(1)  # type: ignore[misc]
+                    report(relative_str)
 
                 destination.write(f"\n{'=' * 60}\n")
                 destination.write(f"# Total files processed: {len(processed_paths)}\n")
                 destination.write(f"# Total size: {total_bytes // 1024}KB\n")
                 if token_count is not None:
                     destination.write(f"# Total tokens: {token_count}\n")
+                destination.flush()
+                os.fsync(destination.fileno())
 
+            if temp_path is None:
+                raise ExtractionError("Failed to create temporary output file")
+
+            os.replace(temp_path, output_path)
+
+        except ExtractionError:
+            if temp_path is not None:
+                try:
+                    temp_path.unlink(missing_ok=True)
+                except OSError:
+                    pass
+            raise
         except OSError as exc:
+            if temp_path is not None:
+                try:
+                    temp_path.unlink(missing_ok=True)
+                except OSError:
+                    pass
             raise ExtractionError(str(exc)) from exc
+        except Exception:
+            if temp_path is not None:
+                try:
+                    temp_path.unlink(missing_ok=True)
+                except OSError:
+                    pass
+            raise
+        finally:
+            self._root_path = None
+            self._gitignore_spec = None
 
         stats = ExtractionStats(
             root=root_path,
@@ -446,9 +533,6 @@ class FileExtractor:
         if token_count is not None:
             stats.token_count = token_count
             stats.token_model = token_model
-
-        self._root_path = None
-        self._gitignore_spec = None
 
         return stats
 

@@ -75,6 +75,7 @@ skip_files = ["package.json", "requirements.txt"]
 tokenizer_model = "gpt-3.5-turbo"
 enable_token_count = false
 copy_to_clipboard = true
+force_include = true
 '''
             config_file.write_text(toml_content, encoding="utf-8")
             
@@ -96,6 +97,7 @@ copy_to_clipboard = true
                 assert config["tokenizer_model"] == "gpt-3.5-turbo"
                 assert config["enable_token_count"] is False
                 assert config["copy_to_clipboard"] is True
+                assert config["force_include"] is True
 
     def test_load_config_partial_config(self):
         """Test loading config with only some settings."""
@@ -145,6 +147,7 @@ class TestApplyConfig:
             "compact_mode": False,
             "skip_empty": False,
             "use_gitignore": False,
+            "force_include": True,
         }
         
         result = apply_config(state, config_data)
@@ -155,6 +158,29 @@ class TestApplyConfig:
         assert state.compact_mode is False
         assert state.skip_empty is False
         assert state.use_gitignore is False
+        assert state.force_include is True
+
+    def test_apply_config_boolean_strings(self):
+        """Test applying boolean settings from string values."""
+        state = AppState()
+
+        config_data = {
+            "compact_mode": "false",
+            "skip_empty": "no",
+            "use_gitignore": "0",
+            "enable_token_count": "False",
+            "copy_to_clipboard": "yes",
+            "force_include": "1",
+        }
+
+        apply_config(state, config_data)
+
+        assert state.compact_mode is False
+        assert state.skip_empty is False
+        assert state.use_gitignore is False
+        assert state.enable_token_count is False
+        assert state.copy_to_clipboard is True
+        assert state.force_include is True
 
     def test_apply_config_include_patterns(self):
         """Test applying include patterns configuration."""
@@ -185,6 +211,22 @@ class TestApplyConfig:
         assert state.skip_extensions == {".pdf", ".png", ".jpg"}
         assert state.skip_patterns == {"__pycache__", ".git", "test_*"}
         assert state.skip_files == {"package.json", "requirements.txt", "Dockerfile"}
+
+    def test_apply_config_disable_filters(self):
+        """Empty collections should disable custom filters."""
+        state = AppState()
+
+        config_data = {
+            "skip_extensions": [],
+            "skip_patterns": [],
+            "skip_files": [],
+        }
+
+        apply_config(state, config_data)
+
+        assert state.skip_extensions == set()
+        assert state.skip_patterns == set()
+        assert state.skip_files == set()
 
     def test_apply_config_tokenizer_settings(self):
         """Test applying tokenizer configuration."""
@@ -265,6 +307,7 @@ class TestSaveConfig:
             state.skip_extensions = {".pdf", ".png"}
             state.skip_patterns = {"__pycache__"}
             state.skip_files = {"package.json"}
+            state.force_include = True
             
             with patch('proxtract.config._config_path') as mock_path:
                 mock_path.return_value = config_path
@@ -296,6 +339,7 @@ class TestSaveConfig:
             state.tokenizer_model = "gpt-4"
             state.enable_token_count = True
             state.copy_to_clipboard = False
+            state.force_include = True
             
             with patch('proxtract.config._config_path') as mock_path:
                 mock_path.return_value = config_path
@@ -321,6 +365,7 @@ class TestSaveConfig:
                     assert 'tokenizer_model = "gpt-4"' in content
                     assert 'enable_token_count = true' in content
                     assert 'copy_to_clipboard = false' in content
+                    assert 'force_include = true' in content
 
     def test_save_config_string_escaping(self):
         """Test proper escaping of strings in manual construction."""
@@ -358,6 +403,7 @@ class TestSaveConfig:
                     self.compact_mode = True
                     self.skip_empty = True
                     self.use_gitignore = True
+                    self.force_include = False
                     self.include_patterns = []
                     self.exclude_patterns = []
                     self.tokenizer_model = "gpt-4"
@@ -419,6 +465,8 @@ class TestConfigRoundTrip:
             original_state.tokenizer_model = "gpt-3.5-turbo"
             original_state.enable_token_count = False
             original_state.copy_to_clipboard = True
+            original_state.force_include = True
+            original_state.force_include = True
             
             with patch('proxtract.config._config_path') as mock_path:
                 mock_path.return_value = config_path
@@ -447,6 +495,8 @@ class TestConfigRoundTrip:
                 assert new_state.tokenizer_model == original_state.tokenizer_model
                 assert new_state.enable_token_count == original_state.enable_token_count
                 assert new_state.copy_to_clipboard == original_state.copy_to_clipboard
+                assert new_state.force_include == original_state.force_include
+                assert new_state.force_include == original_state.force_include
 
 
 if __name__ == "__main__":

@@ -152,8 +152,10 @@ class ExtractScreen(ModalScreen[ExtractionStats | None]):
             )
             return
 
+        total_for_ui = max(total_files, 1)
+
         self.app.call_from_thread(
-            self.post_message, self.ExtractionStarted(total=max(total_files, 1))
+            self.post_message, self.ExtractionStarted(total=total_for_ui)
         )
 
         processed = 0
@@ -165,7 +167,7 @@ class ExtractScreen(ModalScreen[ExtractionStats | None]):
                 self.post_message,
                 self.ExtractionProgress(
                     processed=processed,
-                    total=max(total_files, 1),
+                    total=total_for_ui,
                     description=description or "",
                 ),
             )
@@ -179,6 +181,13 @@ class ExtractScreen(ModalScreen[ExtractionStats | None]):
                 self.post_message, self.ExtractionFailed(str(exc))
             )
             return
+
+        if total_files == 0 and processed == 0:
+            processed = total_for_ui
+            self.app.call_from_thread(
+                self.post_message,
+                self.ExtractionProgress(processed=processed, total=total_for_ui, description=""),
+            )
 
         self.app_state.last_stats = stats
         self.app.call_from_thread(

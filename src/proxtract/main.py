@@ -48,6 +48,10 @@ def _run_cli_extract(args: argparse.Namespace, console: Console) -> int:
         state.include_patterns = [str(pattern) for pattern in args.include]
     if args.exclude:
         state.exclude_patterns = [str(pattern) for pattern in args.exclude]
+    if args.force_include:
+        state.force_include = True
+    elif args.no_force_include:
+        state.force_include = False
     if args.tokenizer_model:
         state.tokenizer_model = args.tokenizer_model
     if args.no_token_count:
@@ -125,6 +129,19 @@ def main(argv: Optional[Sequence[str]] = None) -> None:
     group_gitignore.add_argument("--no-gitignore", dest="no_gitignore", action="store_true", help="Ignore .gitignore rules")
     p_extract.add_argument("--include", action="append", help="Include glob pattern (repeatable)")
     p_extract.add_argument("--exclude", action="append", help="Exclude glob pattern (repeatable)")
+    group_force = p_extract.add_mutually_exclusive_group()
+    group_force.add_argument(
+        "--force-include",
+        dest="force_include",
+        action="store_true",
+        help="Allow include patterns to bypass exclude rules and .gitignore",
+    )
+    group_force.add_argument(
+        "--no-force-include",
+        dest="no_force_include",
+        action="store_true",
+        help="Do not allow include patterns to bypass exclude rules",
+    )
     tokenizer_argument = p_extract.add_argument("--tokenizer-model", help="Tokenizer model for token counting")
     p_extract.add_argument("--no-token-count", action="store_true", help="Disable token counting")
     p_extract.add_argument("--copy", action="store_true", help="Copy result to clipboard")

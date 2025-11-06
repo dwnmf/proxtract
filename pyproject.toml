@@ -103,7 +103,8 @@ source = ["src/proxtract"]
 omit = [
     "*/tests/*",
     "*/test_*",
-    "setup.py"
+    "setup.py",
+    "src/proxtract/tui/*",
 ]
 
 [tool.coverage.report]

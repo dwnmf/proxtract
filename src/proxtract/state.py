@@ -20,10 +20,11 @@ class AppState:
     use_gitignore: bool = True
     include_patterns: list[str] = field(default_factory=list)
     exclude_patterns: list[str] = field(default_factory=list)
+    force_include: bool = False
     # Filtering rules - configurable via settings.toml
-    skip_extensions: set[str] = field(default_factory=set)
-    skip_patterns: set[str] = field(default_factory=set)
-    skip_files: set[str] = field(default_factory=set)
+    skip_extensions: Optional[set[str]] = None
+    skip_patterns: Optional[set[str]] = None
+    skip_files: Optional[set[str]] = None
     tokenizer_model: str = "gpt-4"
     enable_token_count: bool = True
     copy_to_clipboard: bool = False
@@ -39,11 +40,12 @@ class AppState:
             use_gitignore=self.use_gitignore,
             include_patterns=self.include_patterns,
             exclude_patterns=self.exclude_patterns,
+            force_include=self.force_include,
             tokenizer_model=self.tokenizer_model,
             count_tokens=self.enable_token_count,
-            skip_extensions=self.skip_extensions,
-            skip_patterns=self.skip_patterns,
-            skip_files=self.skip_files,
+            skip_extensions=None if self.skip_extensions is None else set(self.skip_extensions),
+            skip_patterns=None if self.skip_patterns is None else set(self.skip_patterns),
+            skip_files=None if self.skip_files is None else set(self.skip_files),
         )
 
     def set_output_path(self, path: str | Path) -> None:

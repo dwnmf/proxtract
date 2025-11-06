@@ -36,10 +36,7 @@ class TestFileFiltering:
         """Test custom pattern filtering rules."""
         extractor = FileExtractor(skip_patterns={"__pycache__", "test_*"})
         
-        assert "__pycache__" in extractor.skip_patterns
-        assert "test_*" in extractor.skip_patterns
-        # Default patterns should still be present
-        assert ".git" in extractor.skip_patterns
+        assert extractor.skip_patterns == {"__pycache__", "test_*"}
 
     def test_custom_skip_files(self):
         """Test custom file name filtering rules."""
@@ -102,7 +99,7 @@ class TestFileFiltering:
             # Test __pycache__ directory
             cache_dir = root / "__pycache__"
             cache_dir.mkdir()
-            test_file = cache_dir / "module.pyc"
+            test_file = cache_dir / "module.txt"
             test_file.write_text("bytecode", encoding="utf-8")
             
             should_skip, reason = extractor._should_skip(test_file, include_override=False)
@@ -149,8 +146,8 @@ class TestFileFiltering:
             
             # Create files
             src_file = root / "src" / "main.py"
+            src_file.parent.mkdir(parents=True, exist_ok=True)
             src_file.write_text("print('src')", encoding="utf-8")
-            src_file.parent.mkdir(parents=True)
             
             other_file = root / "other.py"
             other_file.write_text("print('other')", encoding="utf-8")
@@ -163,6 +160,60 @@ class TestFileFiltering:
             should_skip, reason = extractor._should_skip(other_file, include_override=False)
             assert should_skip
             assert reason == "not_included"
+
+    def test_skip_extensions_disabled_with_empty_set(self):
+        """Empty skip_extensions should disable extension filtering."""
+        extractor = FileExtractor(skip_extensions=set())
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+            extractor._root_path = root
+
+            png_file = root / "image.png"
+            png_file.write_text("fake image", encoding="utf-8")
+
+            should_skip, _ = extractor._should_skip(png_file, include_override=False)
+            assert should_skip is False
+
+    def test_force_include_bypasses_excludes(self, tmp_path):
+        """Include patterns should override excludes when force_include is enabled."""
+        root = tmp_path
+        target = root / "secret.env"
+        target.write_text("token", encoding="utf-8")
+        (root / ".gitignore").write_text("*.env\n", encoding="utf-8")
+
+        extractor = FileExtractor(
+            include_patterns=["secret.env"],
+            exclude_patterns=["*.env"],
+            use_gitignore=True,
+            force_include=True,
+        )
+        output = root / "out.txt"
+        stats = extractor.extract(root, output)
+
+        assert "secret.env" in stats.processed_paths
+        assert stats.skipped["gitignore"] == 0
+        assert stats.skipped["excluded_pattern"] == 0
+
+    def test_force_include_respects_excludes_when_disabled(self, tmp_path):
+        """Without force include, exclude/gitignore still win."""
+        root = tmp_path
+        target = root / "secret.env"
+        target.write_text("token", encoding="utf-8")
+        (root / ".gitignore").write_text("*.env\n", encoding="utf-8")
+
+        extractor = FileExtractor(
+            include_patterns=["secret.env"],
+            exclude_patterns=["*.env"],
+            use_gitignore=True,
+            force_include=False,
+        )
+        output = root / "out.txt"
+        stats = extractor.extract(root, output)
+
+        assert "secret.env" not in stats.processed_paths
+        assert stats.skipped["excluded_pattern"] == 1
+        assert stats.skipped["gitignore"] == 0
 
 
 class TestBinaryDetection:
@@ -378,7 +429,7 @@ class TestExtractionWorkflow:
             binary_file.write_bytes(b'\x89PNG\r\n\x1a\n' + b'binary data')
             
             output_file = root / "extracted.txt"
-            extractor = FileExtractor()
+            extractor = FileExtractor(skip_extensions=set())
             
             stats = extractor.extract(root, output_file)
             
@@ -416,11 +467,19 @@ class TestExtractionWorkflow:
         """Test extraction with include patterns."""
         with tempfile.TemporaryDirectory() as tmpdir:
             root = Path(tmpdir)
-            
+        
             # Create nested files
-            (root / "src" / "main.py").write_text("print('main')", encoding="utf-8")
-            (root / "docs" / "readme.md").write_text("# README", encoding="utf-8")
-            (root / "tests" / "test.py").write_text("def test(): pass", encoding="utf-8")
+            src_file = root / "src" / "main.py"
+            src_file.parent.mkdir(parents=True, exist_ok=True)
+            src_file.write_text("print('main')", encoding="utf-8")
+
+            docs_file = root / "docs" / "readme.md"
+            docs_file.parent.mkdir(parents=True, exist_ok=True)
+            docs_file.write_text("# README", encoding="utf-8")
+
+            tests_file = root / "tests" / "test.py"
+            tests_file.parent.mkdir(parents=True, exist_ok=True)
+            tests_file.write_text("def test(): pass", encoding="utf-8")
             
             output_file = root / "extracted.txt"
             extractor = FileExtractor(include_patterns=["src/*", "*.md"])
@@ -448,7 +507,7 @@ class TestExtractionWorkflow:
             
             # Create a file with mixed encoding that will fail UTF-8 but succeed with cp1251
             mixed_file = root / "mixed.txt"
-            mixed_content = "Café résumé naïve".encode('cp1251') + b'\xe9'  # Test fallback
+            mixed_content = "Привет мир".encode('cp1251') + b'\xff'  # Test fallback
             mixed_file.write_bytes(mixed_content)
             
             output_file = root / "extracted.txt"
@@ -478,6 +537,61 @@ class TestExtractionWorkflow:
             
             assert len(progress_calls) == 2
             assert all(call[0] == 1 for call in progress_calls)  # Each call advances by 1
+
+    def test_extract_progress_counts_skipped_files(self):
+        """Progress callback should advance for skipped files."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+            (root / "keep.txt").write_text("include", encoding="utf-8")
+            (root / "ignore.png").write_text("fake", encoding="utf-8")
+
+            output_file = root / "bundle.txt"
+            extractor = FileExtractor(skip_extensions={".png"})
+
+            progress_calls = []
+
+            extractor.extract(
+                root,
+                output_file,
+                progress_callback=lambda *, advance, description=None: progress_calls.append((advance, description)),
+            )
+
+            # Two files scanned even though only text processed
+            assert len(progress_calls) == 2
+            assert sum(call[0] for call in progress_calls) == 2
+
+    def test_extract_creates_missing_output_directory(self):
+        """Output directories should be created automatically."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+            (root / "file.txt").write_text("content", encoding="utf-8")
+
+            output_file = Path(tmpdir) / "nested" / "dir" / "result.txt"
+            extractor = FileExtractor()
+
+            stats = extractor.extract(root, output_file)
+            assert stats.output == output_file.resolve()
+            assert output_file.exists()
+
+    def test_extract_removes_temp_file_on_failure(self):
+        """Temporary files should be cleaned up when extraction fails."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+            (root / "file.txt").write_text("content", encoding="utf-8")
+
+            output_file = Path(tmpdir) / "out" / "bundle.txt"
+            extractor = FileExtractor()
+
+            def boom(*args, **kwargs):
+                raise RuntimeError("boom")
+
+            with patch.object(FileExtractor, "_read_file_content", side_effect=boom):
+                with pytest.raises(RuntimeError):
+                    extractor.extract(root, output_file)
+
+            assert not output_file.exists()
+            tmp_files = list(output_file.parent.glob(f"{output_file.name}.*.tmp"))
+            assert tmp_files == []
 
 
 if __name__ == "__main__":
