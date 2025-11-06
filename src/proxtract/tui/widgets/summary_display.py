@@ -15,7 +15,7 @@ class SummaryDisplay(Static):
 
     DEFAULT_CSS = """
     SummaryDisplay {
-        border: heavy $accent;
+        border: round $accent;
         padding: 1 2;
         height: auto;
     }
