@@ -73,6 +73,7 @@ from rich.text import Text
 from .config import apply_config, load_config, save_config
 from .core import ExtractionError, ExtractionStats
 from .state import AppState
+from .utils import create_console
 
 COMMANDS = ["extract", "set", "show", "config", "save", "help", "exit", "quit"]
 SETTING_KEYS = [
@@ -132,12 +133,18 @@ class ProxtractCompleter(Completer):
     def _complete_from_word_completer(
         self, completer: WordCompleter, word: str
     ) -> Iterable[Completion]:
+        prefix = ""
+        lookup = word
+        if lookup.startswith("/"):
+            prefix = "/"
+            lookup = lookup[1:]
         start_position = -len(word)
-        lowered = word.lower()
+        lowered = lookup.lower()
         for candidate in completer.words:  # type: ignore[attr-defined]
             if lowered and not candidate.lower().startswith(lowered):
                 continue
-            yield Completion(candidate, start_position=start_position)
+            candidate_text = prefix + candidate
+            yield Completion(candidate_text, start_position=start_position)
 
     def _complete_path(self, word: str, *, directories_only: bool, complete_event) -> Iterable[Completion]:
         completer = self._dir_completer if directories_only else self._path_completer
@@ -153,8 +160,9 @@ class ProxtractCompleter(Completer):
     def get_completions(self, document: Document, complete_event) -> Iterable[Completion]:
         text = document.text_before_cursor
         tokens = _tokenize(text)
+        raw_command = tokens[0] if tokens else document.get_word_before_cursor()
         if not tokens:
-            yield from self._complete_from_word_completer(self._command_words, document.get_word_before_cursor())
+            yield from self._complete_from_word_completer(self._command_words, raw_command)
             return
 
         if tokens[-1] == "":
@@ -165,7 +173,7 @@ class ProxtractCompleter(Completer):
         command = tokens[0].lower()
         token_count = len(tokens)
         if token_count == 1 and current_word != "":
-            yield from self._complete_from_word_completer(self._command_words, current_word)
+            yield from self._complete_from_word_completer(self._command_words, raw_command)
             return
 
         if command in {"exit", "quit", "help", "show", "config", "save"}:
@@ -202,11 +210,16 @@ class ProxtractCompleter(Completer):
 class InteractiveShell:
     """Interactive REPL for Proxtract commands."""
 
-    PROMPT = "[bold cyan]proxtract[/bold cyan]> "
+    PROMPT = "proxtract> "
 
     def __init__(self, console: Console | None = None, state: AppState | None = None) -> None:
-        self.console = console or Console()
         self.state = state or apply_config(AppState(), load_config())
+        self.console = console or create_console()
+        color_attr = getattr(self.console, "_proxtract_color_enabled", None)
+        if color_attr is None:
+            color_attr = bool(getattr(self.console, "color_system", None)) and not getattr(self.console, "no_color", False)
+        self._color_enabled = bool(color_attr)
+        self._plain_output = not self._color_enabled
         self.completer = ProxtractCompleter()
         self._session: PromptSession | None = None
         self._running = True
@@ -234,7 +247,7 @@ class InteractiveShell:
         tokens = _tokenize(command)
         if not tokens:
             return True
-        cmd = tokens[0].lower()
+        cmd = tokens[0].lstrip("/").lower()
         args = tokens[1:]
 
         if cmd in {"exit", "quit"}:
@@ -412,29 +425,34 @@ class InteractiveShell:
             return
 
         extractor = self.state.create_extractor()
-        progress_columns = [
-            SpinnerColumn(),
-            TextColumn("[progress.description]{task.description}"),
-            BarColumn(),
-            TimeElapsedColumn(),
-        ]
-        with Progress(*progress_columns, refresh_per_second=10, console=self.console) as progress:
-            task_id = progress.add_task("Извлечение...", start=False)
+        use_progress = not self._plain_output and self.console.is_terminal
+        try:
+            if use_progress:
+                progress_columns = [
+                    SpinnerColumn(),
+                    TextColumn("[progress.description]{task.description}"),
+                    BarColumn(),
+                    TimeElapsedColumn(),
+                ]
+                with Progress(*progress_columns, refresh_per_second=10, console=self.console) as progress:
+                    task_id = progress.add_task("Извлечение...", start=False)
 
-            def _callback(advance: int = 1, description: str | None = None) -> None:
-                desc = description or "..."
-                if not progress.tasks[task_id].started:
-                    progress.start_task(task_id)
-                progress.update(task_id, advance=advance, description=desc)
+                    def _callback(advance: int = 1, description: str | None = None) -> None:
+                        desc = description or "..."
+                        if not progress.tasks[task_id].started:
+                            progress.start_task(task_id)
+                        progress.update(task_id, advance=advance, description=desc)
 
-            try:
-                stats = extractor.extract(root, destination, progress_callback=_callback)
-            except ExtractionError as exc:
-                self.console.print(Panel(f"[red]Ошибка извлечения:[/red] {exc}", border_style="red"))
-                return
-            except Exception as exc:  # pragma: no cover - defensive
-                self.console.print(Panel(f"[red]Непредвиденная ошибка:[/red] {exc}", border_style="red"))
-                return
+                    stats = extractor.extract(root, destination, progress_callback=_callback)
+            else:
+                self.console.print("Извлечение...")
+                stats = extractor.extract(root, destination)
+        except ExtractionError as exc:
+            self.console.print(Panel(f"[red]Ошибка извлечения:[/red] {exc}", border_style="red"))
+            return
+        except Exception as exc:  # pragma: no cover - defensive
+            self.console.print(Panel(f"[red]Непредвиденная ошибка:[/red] {exc}", border_style="red"))
+            return
 
         self.state.last_stats = stats
         self.console.print(self._build_summary_panel(stats))

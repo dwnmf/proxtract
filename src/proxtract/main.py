@@ -11,6 +11,7 @@ from rich.console import Console
 
 from .interactive import run_interactive
 from .state import AppState
+from .utils import create_console
 
 try:  # Shell auto-completion support
     import argcomplete  # type: ignore
@@ -162,16 +163,18 @@ def main(argv: Optional[Sequence[str]] = None) -> None:
 
         argcomplete.autocomplete(parser)  # type: ignore[call-arg]
 
+    shared_console = create_console()
+
     if not args_list:
-        run_interactive(Console())
+        run_interactive(shared_console)
         return
 
     args = parser.parse_args(args_list)
 
     if args.command == "extract":
-        raise SystemExit(_run_cli_extract(args, Console()))
+        raise SystemExit(_run_cli_extract(args, create_console()))
 
-    run_interactive(Console())
+    run_interactive(shared_console)
 
 
 if __name__ == "__main__":  # pragma: no cover

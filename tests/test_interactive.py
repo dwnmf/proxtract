@@ -137,6 +137,14 @@ def test_unknown_command(tmp_path):
     assert "Неизвестная команда" in console.export_text()
 
 
+def test_slash_prefixed_commands(tmp_path):
+    shell, console, _ = _make_shell(tmp_path)
+    shell.handle_command("/help")
+    assert "Команда" in console.export_text()
+    shell.handle_command("/show")
+    assert "source_path" in console.export_text()
+
+
 @pytest.mark.skipif(PROMPT_TOOLKIT_AVAILABLE, reason="Prompt toolkit present")
 def test_run_without_prompt_toolkit(tmp_path):
     shell, console, _ = _make_shell(tmp_path)
@@ -157,6 +165,10 @@ def test_completer_suggests_commands():
     doc_bool = Document(text="set compact_mode o", cursor_position=len("set compact_mode o"))
     bool_suggestions = [c.text for c in completer.get_completions(doc_bool, None)]
     assert "on" in bool_suggestions
+
+    doc_slash = Document(text="/e", cursor_position=2)
+    slash_suggestions = [c.text for c in completer.get_completions(doc_slash, None)]
+    assert "/extract" in slash_suggestions
 
 
 def test_tokenize_handles_trailing_space():
