@@ -7,7 +7,7 @@ from typing import Any, Callable, Sequence
 
 from textual import events
 from textual.app import ComposeResult
-from textual.containers import Horizontal, Vertical
+from textual.containers import Grid, Vertical
 from textual.message import Message
 from textual.screen import Screen
 from textual.widgets import Footer, Header, Label, ListView
@@ -35,6 +35,8 @@ class MainScreen(Screen):
     """Top-level screen that exposes settings and key actions."""
 
     ID = "main"
+    NARROW_WIDTH = 110
+    COMPACT_WIDTH = 80
 
     def __init__(self, app_state: AppState) -> None:
         super().__init__(id=self.ID)
@@ -45,22 +47,41 @@ class MainScreen(Screen):
         self._items: dict[str, SettingItem] = {}
 
     def compose(self) -> ComposeResult:
-        yield Header()
+        yield Header(show_clock=True)
         yield Vertical(
-            Label("Proxtract Settings", id="title"),
-            Horizontal(
+            Vertical(
+                Label("Proxtract", id="title"),
+                Label(
+                    "Управляйте параметрами извлечения и запускайте сценарии в несколько нажатий.",
+                    id="subtitle",
+                ),
+                id="hero-card",
+                classes="panel-card",
+            ),
+            Grid(
                 Vertical(
-                    Label("Settings", id="settings-header"),
+                    Label("Настройки", id="settings-header", classes="card-title"),
+                    Label("Тонко настройте, что попадёт в пакет.", classes="card-description"),
                     ListView(id="settings-list"),
+                    id="settings-card",
+                    classes="panel-card",
                 ),
                 Vertical(
-                    Label("Actions", id="actions-header"),
+                    Label("Действия", id="actions-header", classes="card-title"),
+                    Label("Запускайте сбор или доп. сценарии.", classes="card-description"),
                     ListView(id="actions-list"),
+                    id="actions-card",
+                    classes="panel-card",
                 ),
                 id="content",
             ),
-            Label("Extraction Summary", id="summary-header"),
-            SummaryDisplay(),
+            Vertical(
+                Label("Сводка последнего запуска", id="summary-header", classes="card-title"),
+                SummaryDisplay(),
+                id="summary-card",
+                classes="panel-card",
+            ),
+            id="main-body",
         )
         yield Footer()
 
@@ -91,6 +112,10 @@ class MainScreen(Screen):
 
         if self.app_state.last_stats is not None:
             self._summary.update_stats(self.app_state.last_stats)
+        self._update_breakpoints(self.size.width if self.size is not None else None)
+
+    def on_resize(self, event: events.Resize) -> None:
+        self._update_breakpoints(event.size.width)
 
     def on_list_view_selected(self, event: ListView.Selected) -> None:
         if event.control.id == "settings-list":
@@ -155,6 +180,12 @@ class MainScreen(Screen):
         item = self._items.get(attr)
         if item is not None:
             item.update_content()
+
+    def _update_breakpoints(self, width: int | None) -> None:
+        is_narrow = width is not None and width <= self.NARROW_WIDTH
+        is_compact = width is not None and width <= self.COMPACT_WIDTH
+        self.set_class(is_narrow, "bp-narrow")
+        self.set_class(is_compact, "bp-compact")
 
     @property
     def _setting_specs(self) -> Sequence[SettingSpec]:

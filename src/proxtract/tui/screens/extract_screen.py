@@ -7,8 +7,9 @@ from functools import partial
 from pathlib import Path
 from typing import Optional
 
+from textual import events
 from textual.app import ComposeResult
-from textual.containers import Horizontal, Vertical
+from textual.containers import Grid, Horizontal, Vertical
 from textual.message import Message
 from textual.screen import ModalScreen
 from textual.worker import Worker, WorkerState
@@ -24,6 +25,8 @@ class ExtractScreen(ModalScreen[ExtractionStats | None]):
     """Modal workflow for launching a project extraction."""
 
     CSS_PATH = STYLES_PATH
+    NARROW_WIDTH = 110
+    COMPACT_WIDTH = 80
 
     @dataclass
     class ExtractionProgress(Message):
@@ -55,15 +58,27 @@ class ExtractScreen(ModalScreen[ExtractionStats | None]):
 
     def compose(self) -> ComposeResult:
         yield Vertical(
-            Label("Extract Project", id="extract-title"),
-            Label(
-                "Configure the source directory and output path, then launch extraction.",
-                id="extract-description",
+            Vertical(
+                Label("Extract Project", id="extract-title"),
+                Label(
+                    "Configure the source directory and output path, then launch extraction.",
+                    id="extract-description",
+                ),
+                id="extract-header",
             ),
-            Label("Source Directory", id="extract-root-label"),
-            CompletionInput(id="extract-root", mode="path"),
-            Label("Output File", id="extract-output-label"),
-            CompletionInput(id="extract-output", mode="path"),
+            Grid(
+                Vertical(
+                    Label("Source Directory", id="extract-root-label", classes="form-label"),
+                    CompletionInput(id="extract-root", mode="path", classes="form-input"),
+                    classes="form-field",
+                ),
+                Vertical(
+                    Label("Output File", id="extract-output-label", classes="form-label"),
+                    CompletionInput(id="extract-output", mode="path", classes="form-input"),
+                    classes="form-field",
+                ),
+                id="extract-form",
+            ),
             Horizontal(
                 Button("Cancel", id="cancel"),
                 Button("Start Extraction", id="start", variant="primary"),
@@ -73,6 +88,7 @@ class ExtractScreen(ModalScreen[ExtractionStats | None]):
             Label("", id="extract-status"),
             SummaryDisplay(),
             id="extract-container",
+            classes="modal-card modal-large",
         )
 
     def on_mount(self) -> None:
@@ -95,6 +111,10 @@ class ExtractScreen(ModalScreen[ExtractionStats | None]):
             self._summary.update_stats(self.app_state.last_stats)
 
         root_input.focus()
+        self._update_breakpoints(self.size.width if self.size is not None else None)
+
+    def on_resize(self, event: events.Resize) -> None:
+        self._update_breakpoints(event.size.width)
 
     def on_button_pressed(self, event: Button.Pressed) -> None:
         if event.button.id == "cancel":
@@ -274,6 +294,12 @@ class ExtractScreen(ModalScreen[ExtractionStats | None]):
             self._update_status(f"Error: {message}")
             self.app.notify(f"Extraction failed: {message}", severity="error")
             event.stop()
+
+    def _update_breakpoints(self, width: int | None) -> None:
+        is_narrow = width is not None and width <= self.NARROW_WIDTH
+        is_compact = width is not None and width <= self.COMPACT_WIDTH
+        self.set_class(is_narrow, "bp-narrow")
+        self.set_class(is_compact, "bp-compact")
 
 
 __all__ = ["ExtractScreen"]

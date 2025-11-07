@@ -47,15 +47,23 @@ class EditSettingScreen(ModalScreen[str | None]):
         )
 
         yield Vertical(
-            Label(self._label, id="edit-title"),
-            Label(self._description, id="edit-description"),
-            input_widget,
+            Vertical(
+                Label(self._label, id="edit-title"),
+                Label(self._description, id="edit-description"),
+                id="edit-header",
+            ),
+            Vertical(
+                Label("Новое значение", id="edit-input-label", classes="form-label"),
+                input_widget,
+                classes="form-field",
+            ),
             Horizontal(
                 Button("Cancel", id="cancel"),
                 Button("Save", id="save", variant="primary"),
                 id="edit-buttons",
             ),
             id="edit-container",
+            classes="modal-card",
         )
 
     def on_mount(self) -> None:
