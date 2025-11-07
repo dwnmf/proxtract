@@ -1,0 +1,4615 @@
+# Extracted from: /home/k1/extractor-1
+# Max file size: 500KB
+# Mode: compact
+============================================================
+# Gitignore: on
+
+--- LICENSE ---
+MIT License
+
+Copyright (c) 2024 Proxtract Team
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+
+--- MANIFEST.in ---
+include LICENSE
+recursive-include src/proxtract *.tcss
+
+
+--- README.md ---
+# Proxtract
+
+Proxtract is an interactive CLI for extracting readable project files into a single bundle that is easy to share with large language models.
+
+## Features
+- Rich-powered TUI with colorized output, tables, and progress indicators
+- Session state for configurable extraction settings
+- Command suite for quick extraction, configuration, and help
+
+## Installation
+
+```bash
+pip install proxtract
+```
+
+Install with the optional ASCII art banner extras by adding `banner`:
+
+```bash
+pip install proxtract[banner]
+```
+
+## Usage
+
+Launch the TUI with:
+
+```bash
+proxtract
+```
+
+Or reach for the compact alias:
+
+```bash
+prx
+```
+
+Inside the session use `/help` to see available commands. Typical flow:
+
+1. Adjust defaults with `/settings` if needed.
+2. Run `/extract <path> [output_file]` to stream project files into one document.
+3. Exit anytime with `/exit`.
+
+Settings keys accept handy aliases: `/settings max 1024`, `/settings out merged.txt`, `/settings compact off`, `/settings empty on`.
+
+Run a one-off extraction directly from the shell with the short form:
+
+```bash
+prx e path/to/project -o bundle.txt
+```
+
+### Shell Tab Completion
+
+Shell tab-completion for commands, options, and path arguments is available via
+`argcomplete`. After installing Proxtract, enable completion (bash/zsh/fish) with:
+
+```bash
+register-python-argcomplete proxtract prx >> ~/.bashrc  # adapt for your shell
+```
+
+Restart your shell (or source the file) and enjoy tab-completion for both `proxtract`
+and `prx`.
+
+## Verification
+
+After installing, you can confirm the basics operate with the bundled smoke test:
+
+```bash
+python scripts/smoke_test.py
+```
+
+The script launches the TUI (and exits cleanly) and performs a one-file extraction using the public API.
+
+## Development
+- Python 3.9+
+- Dependencies managed via `pyproject.toml`
+
+Run the TUI locally without installing by executing `python -m proxtract` from the project root. The banner gracefully falls back to ASCII art if the optional `art` dependency is unavailable.
+
+For editable development installs, use:
+
+```bash
+pip install -e .[dev,banner]
+```
+
+## Publishing to PyPI
+
+1. Ensure `dist/` is clean: `rm -rf dist/ build/`
+2. Build the distribution artifacts: `python -m build`
+3. Inspect the generated wheels and sdist under `dist/`
+4. Run a sanity check: `twine check dist/*`
+5. Upload to PyPI (or TestPyPI) with `twine upload dist/*`
+
+
+--- plan.md ---
+Критические ошибки в логике
+
+1. Неверный парсинг булевых значений в конфиге. Функция safe_bool использует bool(value), из‑за чего строка "false" обрабатывается как True. Это легко приводит к обратной интерпретации флагов из settings.toml и UI. Риски: неожиданные включения compact_mode/skip_empty/use_gitignore. Исправить: распознавать строки {"1","true","yes","on"} как True, {"0","false","no","off"} как False; оставлять default при None/пустых строках. 
+
+2. Ошибочная попытка записывать TOML через stdlib tomllib. В save_config ветка «Python 3.11+ tomllib has dump(s)» некорректна: tomllib read‑only и не имеет dump/dumps. Сейчас код падает и молча уходит в ручную сериализацию. Исправить: использовать только tomli‑w для записи, при его отсутствии явно писать «построение TOML не поддерживается» либо всегда fallback на ручной рендер без попытки tomllib. 
+
+3. Невозможно полностью отключить дефолтные фильтры (skip_*). В FileExtractor используется проверка «if skip_extensions else default», поэтому пустое множество из AppState приводит не к «нет фильтров», а к возврату дефолтного набора. Аналогично для skip_patterns/skip_files. Итог: пользователь не может через конфиг очистить правила. Исправить: трактовать None как «использовать дефолт», а пустое множество как «фильтров нет».  
+
+4. Не создаются директории для файла назначения. В extract() сразу open(output_path, "w"), без mkdir(parents=True). Любой несуществующий каталог вызывает ошибку OSError. Исправить: перед записью создавать output_path.parent. Дополнительно — атомарная запись через временный файл и rename. 
+
+5. Несогласованность прогресса. В TUI «total» считается как количество всех файлов rglob(*), а прогресс увеличивается только на реально обработанные файлы (после фильтров и бинарного детекта). На проектах с множеством пропусков прогресс никогда не дойдёт до 100%. Исправить один из вариантов: а) инкрементировать прогресс на каждом просмотренном файле (visited), или б) предварительно просканировать кандидатов с применением фильтров и вычислить корректный total.  
+
+6. Приоритет include/exclude неочевиден. exclude_patterns и .gitignore проверяются раньше include_override; следовательно, include‑паттерн не может «пробить» исключения и игнор. Если требуемая семантика — «include победитель», порядок проверок нужно поменять или ввести отдельный «force_include». Сейчас: exclude → gitignore → not_included → skip_* → размер/пустота. 
+
+7. Дублированные магические сигнатуры и шумные эвристики бинарности. В binary_signatures ключ PK\x03\x04 указан дважды (zip/docx), что не фатально, но показывает ручной и хрупкий список; сигнатура "SQLite" слишком общая, «RIFF» помечает не только webp. Лучше упростить: сначала быстрые проверки (null‑bytes, контрольные символы), затем mimes (mimetypes) и точечные проверки zip/pdf/png/jpg; опционально — python‑magic при наличии. 
+
+8. Ошибки чтения содержимого попадают в итоговый вывод как текст. _read_file_content возвращает "[ERROR: Could not decode file]" и этот маркер записывается в bundle. Правильнее логировать в stats.errors/ skipped и не засорять результат. 
+
+9. Отсутствует обработка симлинков. rglob() пройдёт по симлинкам; is_file() вернёт True для ссылок на файлы. Это может привести к дублированию и непредсказуемым обходам вне root. Рекомендация: по умолчанию skip для is_symlink(), с флагом allow_symlinks для опытных. 
+
+10. Несоответствие требований покрытия. В pyproject включён --cov-fail-under=80, но coverage.xml демонстрирует множество строк с hits="0". Это гарантированно падающая CI‑шибка при включении quality‑гейтов. Либо поднимать покрытие, либо понизить целевой порог до реального.  
+
+Проблемы UX/UI, влияющие на минимализм
+
+1. Стартовый Source Directory заполняется как parent от output_path, что сбивает с толку: пользователь ожидает cwd или последний root. Исправить: дефолт = текущая рабочая директория; кешировать последний успешный root. 
+
+2. Экран извлечения перегружен лишними шагами: подписи, кнопки и прогресс показаны до старта. Упростить: один экран с двумя полями (Root, Output) и одной кнопкой «Extract». Прогресс и Summary — только после старта/завершения. 
+
+3. Список настроек перегружен для базового сценария. Сейчас на главном экране 10+ параметров. Предлагаю «Базовые» (Output, Max size, .gitignore) и «Расширенные» (include/exclude, token count, tokenizer, clipboard) под collapsible‑секцией или отдельным модальным окном. 
+
+4. Прогресс‑бар и статус сначала инициализируются total=100, затем пересчитываются — визуальный «дёрг». Инициализировать без total либо с «indeterminate» до получения реального total. 
+
+5. Сообщение о неудаче в TUI показывает только текст ошибки, без «попробовать снова» и без быстрого доступа к логам. Добавить кнопку Retry, ссылку «Показать детали» с раскрытием errors. 
+
+6. Копирование в буфер происходит сразу после dismiss модалки, а чтение содержимого целевого файла для больших бандлов может блокировать UI. Перенести копирование перед dismiss или делать его лениво по кнопке «Copy» в Summary. 
+
+7. Текст описаний «Include/Exclude Patterns» говорит «comma separated», но пользователю неочевидно, что шаблон применяется относительно корня. Добавить подсказку с примерами: "src/**, *.md". 
+
+8. Summary перегружает «Bytes» сырым числом. Показать человекочитаемо (KB/MB) и первые 3 причины пропусков с числами, остальное под «ещё…». 
+
+План приведения к минималистичному и отказоустойчивому состоянию (для сеньора)
+
+Фаза 1 — корректность и базовая надёжность
+
+1. Починить парсинг булей в конфиге: внедрить нормализатор строк для True/False. Применить в apply_config и в UI‑парсере для единообразия. Критерий приёмки: строки "false"/"no"/"0" корректно отключают флаги; тесты покрывают эти кейсы.  
+2. Исправить сохранение конфига: отказаться от tomllib для записи; использовать tomli‑w, иначе явный fallback без ошибок. Критерий: save_config не бросает исключений при отсутствии tomli‑w и создаёт корректный TOML. 
+3. Переписать семантику skip_*: None — дефолт, пустое множество — отключение фильтра. Протянуть через AppState → create_extractor → FileExtractor.**init**. Критерий: пустые skip_* действительно снимают фильтры.  
+4. Обеспечить создание директорий и атомарную запись результата: mkdir(parents=True, exist_ok=True), запись во временный файл и rename; опциональная .tmp суффиксация. Критерий: извлечение успешно в несуществующие пути и не оставляет частичных файлов при сбое. 
+5. Устранить расхождение прогресса: считать total по всем посещённым путям (visited) либо сделать двухпроходный быстрый подсчёт кандидатов с фильтрами без чтения содержимого; альтернативно поддержать «indeterminate» до первого апдейта total. Критерий: индикатор гарантированно достигает 100%.  
+6. Сделать включение «силовым»: если включена опция «force include», include‑паттерны обходят exclude/.gitignore. Иначе задокументировать текущую последовательность. Критерий: тесты для пересечения include и exclude. 
+
+Фаза 2 — минимизация UI
+
+1. Экран Extract: по умолчанию только два поля (Root, Output) и кнопка «Extract». Прятать второстепенные элементы до запуска; прогресс и Summary показывать контекстно после старта/финиша. Критерий: путь до извлечения — один шаг. 
+2. Дефолт Root = cwd; запоминать последний успешный Root в памяти/конфиге. Критерий: запуск «в один клик» из корня проекта. 
+3. Главный экран: разделить настройки на «Базовые» и «Расширенные» (collapsible или модалка). Критерий: базовый список ≤3 пунктов; расширенные доступны за один ввод. 
+4. Улучшить подсказки к паттернам: показать, что они относительны к Root, и дать примеры. Критерий: unit‑тесты на корректную интерпретацию относительных путей. 
+
+Фаза 3 — отказоустойчивость и безопасность данных
+
+1. Обход симлинков: по умолчанию skip is_symlink(); добавить флаг allow_symlinks. Критерий: отсутствие обхода за пределы root при наличии ссылок. 
+2. Бинарный детект: убрать дубли сигнатур, сделать pipeline: fast checks (null‑bytes/контрольные), ограниченная таблица сигнатур (png/jpg/gif/pdf/zip), затем попытка декодирования; опционально python‑magic при наличии. Критерий: тесты из набора images/pdf/zip, ложно‑положительные <1%. 
+3. Ошибки чтения: заменять вставку «[ERROR…]» на пропуск + запись причины в stats.errors и skipped["other"]. Критерий: результирующий bundle не содержит служебных сообщений. 
+4. Лимиты на чтение для гигантских файлов в standard‑mode: soft‑cap (например, 5 МБ на файл) с явным предупреждением в errors. Критерий: стабильная работа на монорепозиториях.
+
+Фаза 4 — наблюдаемость и опыт пользователя
+
+1. Summary: человекочитаемый размер (KB/MB), топ‑3 причин пропуска + «ещё N», список предупреждений сворачиваемый. Критерий: читаемость на одном экране. 
+2. Retry/Copy в UI: кнопка «Retry» на ошибке; «Copy to clipboard» в Summary вместо автокопирования после dismiss. Критерий: отсутствие лишних блокировок UI. 
+3. Логи: опциональный файл журнала рядом с output (output.log) с полным перечнем пропусков и ошибок.
+
+Фаза 5 — производительность и масштаб
+
+1. Потоковая запись без сортировки полного списка rglob, чтобы не держать каталог целиком в памяти; при необходимости опция «stable order» отдельно. Критерий: стабильная работа на 100k+ файлов.
+2. Токены: инициализация tiktoken один раз, возможность «sample‑estimate» для больших файлов. Критерий: время извлечения не деградирует при включённом подсчёте. 
+
+Фаза 6 — тесты/качество
+
+1. Добавить unit‑тесты на булев парсинг и пустые skip_* (очистка фильтров). Критерий: сценарии "false"/"off" и [] проходят. 
+2. Тест на mkdir+atomic write: извлечение в несуществующий путь и симулированный сбой посередине.
+3. Тесты на прогресс: «все файлы пропущены» и «большинство бинарные» — прогресс всё равно доходит до 100%. 
+4. Проверить и синхронизировать порог покрытия с фактическим состоянием; временно снизить порог или усилить покрытие модулей main/tui.  
+
+Быстрые фиксы (вносятся без изменения архитектуры)
+
+— В ExtractScreen по on_mount задавать root = cwd вместо output.parent; скрывать ProgressBar до старта; инициализировать как indeterminate. 
+— В save_config убрать ветку tomllib.dumps, оставить tomli‑w либо явный fallback. 
+— В FileExtractor.**init** различать None и пустые множества для skip_*; протянуть это из AppState.  
+— В extract() перед open() вызывать output_path.parent.mkdir(parents=True, exist_ok=True); писать во временный файл и rename. 
+— В _read_file_content ошибки не возвращать как текст; логировать в stats и помечать как skipped["other"]. 
+— В подсчёте прогресса увеличивать processed на каждый просмотренный путь либо корректно переоценивать total перед стартом.  
+— Привести binary_signatures к минимальному набору без дублей; удалить лишние/шумные сигнатуры. 
+
+Ожидаемый эффект
+
+— Прозрачная и предсказуемая семантика конфигов и фильтров.
+— Минимальный «путь до результата» в UI, без когнитивного шума.
+— Устойчивость к типовым сбоям (пути, частичная запись, бинарные файлы, симлинки).
+— Корректный прогресс на любых репозиториях.
+— Готовность к CI‑гейтам и реальным монорепозиториям.
+
+Если нужно, могу сразу проставить конкретные патчи по указанным местам и добавить целевые тесты под каждый пункт.
+
+
+--- pyproject.toml ---
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "proxtract"
+version = "0.2.22"
+description = "Interactive TUI CLI to extract project files into a single bundle"
+authors = [
+    { name = "Proxtract Team" }
+]
+readme = "README.md"
+requires-python = ">=3.9"
+license = "MIT"
+keywords = ["cli", "developer-tools", "prompt-engineering", "project-extraction"]
+license-files = ["LICENSE"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "Environment :: Console",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Operating System :: OS Independent"
+]
+dependencies = [
+    "rich>=13.7.0",
+    "textual>=0.60",
+    "argcomplete>=3.1.4"
+]
+
+[project.scripts]
+proxtract = "proxtract.main:main"
+prx = "proxtract.main:main"
+
+[project.optional-dependencies]
+banner = ["art>=6.0"]
+gitignore = ["pathspec>=0.11"]
+tokens = ["tiktoken>=0.7"]
+clipboard = ["pyperclip>=1.8"]
+config = ["tomli>=2.0", "tomli-w>=1.0"]
+all = [
+    "art>=6.0",
+    "pathspec>=0.11",
+    "tiktoken>=0.7",
+    "pyperclip>=1.8",
+    "tomli>=2.0",
+    "tomli-w>=1.0",
+    "argcomplete>=3.1.4",
+]
+dev = [
+    "build>=1.0.3",
+    "twine>=4.0.2",
+    "pytest>=7.0.0",
+    "pytest-cov>=4.0.0",
+    "pytest-mock>=3.10.0"
+]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools]
+include-package-data = true
+
+[tool.pytest.ini_options]
+minversion = "6.0"
+addopts = [
+    "-ra",
+    "--strict-markers",
+    "--strict-config",
+    "--cov=src/proxtract",
+    "--cov-report=term-missing",
+    "--cov-report=html:htmlcov",
+    "--cov-report=xml",
+    "--cov-fail-under=80"
+]
+testpaths = [
+    "tests"
+]
+python_files = "test_*.py"
+python_classes = "Test*"
+python_functions = "test_*"
+markers = [
+    "slow: marks tests as slow (deselect with '-m \"not slow\"')",
+    "integration: marks tests as integration tests",
+    "unit: marks tests as unit tests",
+    "tui: marks tests as TUI-related",
+    "cli: marks tests as CLI-related",
+    "core: marks tests as core functionality",
+    "config: marks tests as configuration-related"
+]
+filterwarnings = [
+    "error",
+    "ignore::UserWarning",
+    "ignore::DeprecationWarning:rich.*",
+    "ignore::DeprecationWarning:textual.*"
+]
+
+[tool.coverage.run]
+source = ["src/proxtract"]
+omit = [
+    "*/tests/*",
+    "*/test_*",
+    "setup.py",
+    "src/proxtract/tui/*",
+]
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "def __repr__",
+    "if self.debug:",
+    "if settings.DEBUG",
+    "raise AssertionError",
+    "raise NotImplementedError",
+    "if 0:",
+    "if __name__ == .__main__.:",
+    "class .*\\bProtocol\\):",
+    "@(abc\\.)?abstractmethod"
+]
+
+[tool.coverage.html]
+directory = "htmlcov"
+
+
+--- scripts/smoke_test.py ---
+"""Quick smoke test for the Proxtract interfaces.
+
+The test validates that the CLI help is accessible, performs a single-file
+extraction check using the public API, and verifies the command-line extract
+subcommand. This script is intended for manual verification and CI smoke runs.
+"""
+
+from __future__ import annotations
+
+import subprocess
+import sys
+import tempfile
+import os
+from pathlib import Path
+from unittest.mock import patch
+
+from proxtract.core import FileExtractor
+
+
+def _check_cli_help() -> None:
+    result = subprocess.run(
+        [sys.executable, "-m", "proxtract", "--help"],
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        text=True,
+        timeout=10,
+    )
+
+    if result.returncode != 0:
+        raise RuntimeError(f"CLI help failed: {result.stderr or result.stdout}")
+
+    if "extract" not in result.stdout:
+        raise RuntimeError("Expected extract subcommand to appear in help output")
+
+
+def _check_cli_extract() -> None:
+    with tempfile.TemporaryDirectory() as tmpdir:
+        root = Path(tmpdir)
+        (root / "sample.txt").write_text("hello cli", encoding="utf-8")
+        output = root / "cli_output.txt"
+
+        process = subprocess.Popen(
+            [sys.executable, "-m", "proxtract", "extract", str(root), "--output", str(output)],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+        )
+
+        stdout, stderr = process.communicate(timeout=15)
+
+        if process.returncode != 0:
+            raise RuntimeError(f"CLI extract failed: {stderr or stdout}")
+
+        if not output.exists():
+            raise RuntimeError("CLI extract did not produce the expected output file")
+
+
+def _check_core_extraction() -> None:
+    extractor = FileExtractor()
+    with tempfile.TemporaryDirectory() as tmpdir:
+        root = Path(tmpdir)
+        sample_file = root / "sample.txt"
+        sample_file.write_text("hello proxtract", encoding="utf-8")
+        output = root / "output.txt"
+
+        stats = extractor.extract(root, output)
+
+        if stats.processed_files != 1:
+            raise RuntimeError("Expected exactly one file processed")
+
+        merged = output.read_text(encoding="utf-8")
+        if "hello proxtract" not in merged:
+            raise RuntimeError("Extracted content missing from output")
+
+
+def _check_file_filtering() -> None:
+    """Test file filtering logic including extensions, patterns, and file names."""
+    with tempfile.TemporaryDirectory() as tmpdir:
+        root = Path(tmpdir)
+        
+        # Create test files
+        (root / "python.py").write_text("print('python')", encoding="utf-8")
+        (root / "image.png").write_text("fake png content", encoding="utf-8")  # Binary-like
+        (root / "document.pdf").write_text("fake pdf content", encoding="utf-8")
+        (root / "test.js").write_text("console.log('test');", encoding="utf-8")
+        (root / "package.json").write_text('{"name": "test"}', encoding="utf-8")
+        (root / "empty.txt").write_text("", encoding="utf-8")  # Empty file
+        (root / "large.txt").write_text("x" * (600 * 1024), encoding="utf-8")  # Large file
+        
+        # Test with custom filtering rules
+        extractor = FileExtractor(
+            skip_extensions={".pdf", ".png"},  # Skip PDF and PNG files
+            skip_files={"package.json"},       # Skip package.json specifically
+            skip_patterns={"test_*"},          # Skip files starting with test_
+            max_file_size_kb=500,              # 500KB limit
+        )
+        
+        output = root / "filtered_output.txt"
+        stats = extractor.extract(root, output)
+        
+        # Verify filtering worked
+        content = output.read_text(encoding="utf-8")
+        
+        # Should have processed the .py and .js files
+        if "python.py" not in content:
+            raise RuntimeError("Expected python.py to be processed")
+        if "test.js" not in content:
+            raise RuntimeError("Expected test.js to be processed (test_* pattern doesn't match .js files)")
+        
+        # Should have skipped the filtered files
+        if "image.png" in content:
+            raise RuntimeError("Expected image.png to be skipped")
+        if "document.pdf" in content:
+            raise RuntimeError("Expected document.pdf to be skipped")
+        if "package.json" in content:
+            raise RuntimeError("Expected package.json to be skipped")
+        if "empty.txt" in content:
+            raise RuntimeError("Expected empty.txt to be skipped (empty files)")
+        if "large.txt" in content:
+            raise RuntimeError("Expected large.txt to be skipped (too large)")
+        
+        # Verify stats
+        if stats.processed_files != 2:
+            raise RuntimeError(f"Expected 2 files processed, got {stats.processed_files}")
+        
+        if stats.skipped.get("excluded_ext", 0) != 2:
+            raise RuntimeError(f"Expected 2 files skipped by extension, got {stats.skipped.get('excluded_ext', 0)}")
+        
+        if stats.skipped.get("excluded_name", 0) != 1:
+            raise RuntimeError(f"Expected 1 file skipped by name, got {stats.skipped.get('excluded_name', 0)}")
+        
+        if stats.skipped.get("empty", 0) != 1:
+            raise RuntimeError(f"Expected 1 file skipped as empty, got {stats.skipped.get('empty', 0)}")
+        
+        if stats.skipped.get("too_large", 0) != 1:
+            raise RuntimeError(f"Expected 1 file skipped as too large, got {stats.skipped.get('too_large', 0)}")
+
+
+def _check_binary_detection() -> None:
+    """Test binary file detection."""
+    with tempfile.TemporaryDirectory() as tmpdir:
+        root = Path(tmpdir)
+        
+        # Create test files with different content types
+        text_file = root / "text.txt"
+        text_file.write_text("This is a text file", encoding="utf-8")
+        
+        binary_like_file = root / "binary.xyz"  # Use extension not in default skip list
+        # Write PNG signature + some binary content
+        binary_content = b'\x89PNG\r\n\x1a\n' + b'\x00' * 100
+        binary_like_file.write_bytes(binary_content)
+        
+        # Create a file with high null byte ratio
+        null_file = root / "nulls.abc"  # Use extension not in default skip list
+        null_file.write_bytes(b'\x00' * 50 + b'text' + b'\x00' * 50)
+        
+        extractor = FileExtractor()
+        output = root / "binary_output.txt"
+        stats = extractor.extract(root, output)
+        
+        content = output.read_text(encoding="utf-8")
+        
+        # Text file should be processed
+        if "text.txt" not in content:
+            raise RuntimeError("Expected text.txt to be processed")
+        
+        # Binary files should be skipped
+        if "binary.xyz" in content:
+            raise RuntimeError("Expected binary.xyz to be skipped")
+        
+        if "nulls.abc" in content:
+            raise RuntimeError("Expected nulls.abc to be skipped")
+        
+        # Verify stats
+        if stats.skipped.get("binary", 0) != 2:
+            raise RuntimeError(f"Expected 2 files skipped as binary, got {stats.skipped.get('binary', 0)}")
+
+
+def _check_include_patterns() -> None:
+    """Test include pattern filtering."""
+    with tempfile.TemporaryDirectory() as tmpdir:
+        root = Path(tmpdir)
+        
+        # Create test files with directories
+        (root / "src").mkdir()
+        (root / "src" / "file.py").write_text("print('python')", encoding="utf-8")
+        (root / "docs").mkdir()
+        (root / "docs" / "readme.md").write_text("# README", encoding="utf-8")
+        (root / "tests").mkdir()
+        (root / "tests" / "test.py").write_text("def test(): pass", encoding="utf-8")
+        
+        extractor = FileExtractor(include_patterns=["src/*", "*.md"])
+        output = root / "include_output.txt"
+        stats = extractor.extract(root, output)
+        
+        content = output.read_text(encoding="utf-8")
+        
+        # Should only process included files
+        if "src/file.py" not in content:
+            raise RuntimeError("Expected src/file.py to be processed (included pattern)")
+        if "docs/readme.md" not in content:
+            raise RuntimeError("Expected docs/readme.md to be processed (included pattern)")
+        
+        # Should skip excluded files
+        if "tests/test.py" in content:
+            raise RuntimeError("Expected tests/test.py to be skipped (not in include patterns)")
+
+
+def main() -> None:
+    print("Running smoke tests...")
+    _check_cli_help()
+    print("✓ CLI help check passed")
+    
+    _check_cli_extract()
+    print("✓ CLI extract check passed")
+    
+    _check_core_extraction()
+    print("✓ Core extraction check passed")
+    
+    _check_file_filtering()
+    print("✓ File filtering check passed")
+    
+    _check_binary_detection()
+    print("✓ Binary detection check passed")
+    
+    _check_include_patterns()
+    print("✓ Include patterns check passed")
+    
+    print("All smoke tests passed! CLI launches and all filtering logic works.")
+
+
+if __name__ == "__main__":
+    main()
+
+
+--- scripts/tui_smoke.py ---
+"""Lightweight headless smoketest for the Proxtract Textual app."""
+
+from __future__ import annotations
+
+import asyncio
+
+from proxtract.state import AppState
+from proxtract.tui.app import ProxtractApp
+
+
+async def _run() -> None:
+    app = ProxtractApp(AppState())
+    async with app.run_test() as pilot:
+        await pilot.pause()
+        await pilot.press("q")
+
+
+def main() -> None:
+    asyncio.run(_run())
+
+
+if __name__ == "__main__":
+    main()
+
+
+--- src/proxtract/__init__.py ---
+"""Proxtract package exposing the interactive extractor CLI."""
+
+from importlib import metadata as _metadata
+
+from .core import ExtractionError, ExtractionStats, FileExtractor
+
+try:
+    __version__ = _metadata.version("proxtract")
+except _metadata.PackageNotFoundError:  # pragma: no cover - local editable install
+    __version__ = "0.1.0"
+
+__all__ = ["FileExtractor", "ExtractionError", "ExtractionStats", "__version__"]
+
+
+--- src/proxtract/__main__.py ---
+"""Module entrypoint for ``python -m proxtract``."""
+
+from .main import main
+
+
+if __name__ == "__main__":  # pragma: no cover
+    main()
+
+
+--- src/proxtract/config.py ---
+"""Configuration persistence helpers for Proxtract."""
+
+from __future__ import annotations
+
+from pathlib import Path
+from typing import Any, Dict, Iterable, Optional
+
+from .state import AppState
+from .utils import normalize_bool
+
+try:  # Python 3.11+
+    import tomllib as _tomllib  # type: ignore[assignment]
+except Exception:  # pragma: no cover - fallback to tomli if available
+    try:
+        import tomli as _tomllib  # type: ignore
+    except Exception:  # pragma: no cover - optional dependency missing
+        _tomllib = None  # type: ignore
+
+try:  # TOML writing library
+    import tomli_w as _tomli_w  # type: ignore[assignment]
+except Exception:  # pragma: no cover - optional dependency missing
+    _tomli_w = None  # type: ignore
+
+
+def _config_path() -> Path:
+    return Path("~/.config/proxtract/settings.toml").expanduser()
+
+
+def load_config() -> Dict[str, Any]:
+    path = _config_path()
+    if not path.exists() or _tomllib is None:
+        return {}
+    try:
+        return _tomllib.loads(path.read_text(encoding="utf-8"))
+    except Exception:
+        return {}
+
+
+def apply_config(state: AppState, data: Dict[str, Any]) -> AppState:
+    if not data:
+        return state
+
+    # Helper function to safely convert to int
+    def safe_int(value, default):
+        try:
+            return int(value)
+        except (ValueError, TypeError):
+            return default
+
+    source_root = data.get("source_root", state.source_root)
+    state.source_root = Path(source_root).expanduser()
+
+    output_path = data.get("output_path", state.output_path)
+    state.output_path = Path(output_path).expanduser()
+    
+    state.max_size_kb = safe_int(data.get("max_size_kb", state.max_size_kb), state.max_size_kb)
+    state.compact_mode = normalize_bool(data.get("compact_mode", state.compact_mode), state.compact_mode)
+    state.skip_empty = normalize_bool(data.get("skip_empty", state.skip_empty), state.skip_empty)
+    state.use_gitignore = normalize_bool(data.get("use_gitignore", state.use_gitignore), state.use_gitignore)
+    state.force_include = normalize_bool(data.get("force_include", state.force_include), state.force_include)
+
+    include = data.get("include_patterns")
+    if isinstance(include, list):
+        state.include_patterns = [str(item) for item in include]
+
+    exclude = data.get("exclude_patterns")
+    if isinstance(exclude, list):
+        state.exclude_patterns = [str(item) for item in exclude]
+
+    # Filter configuration - allow overriding hardcoded filters
+    skip_extensions = data.get("skip_extensions", state.skip_extensions)
+    if skip_extensions is None:
+        state.skip_extensions = None
+    elif isinstance(skip_extensions, list):
+        state.skip_extensions = {str(item) for item in skip_extensions}
+
+    skip_patterns = data.get("skip_patterns", state.skip_patterns)
+    if skip_patterns is None:
+        state.skip_patterns = None
+    elif isinstance(skip_patterns, list):
+        state.skip_patterns = {str(item) for item in skip_patterns}
+
+    skip_files = data.get("skip_files", state.skip_files)
+    if skip_files is None:
+        state.skip_files = None
+    elif isinstance(skip_files, list):
+        state.skip_files = {str(item) for item in skip_files}
+
+    state.tokenizer_model = str(data.get("tokenizer_model", state.tokenizer_model))
+    state.enable_token_count = normalize_bool(
+        data.get("enable_token_count", state.enable_token_count), state.enable_token_count
+    )
+    state.copy_to_clipboard = normalize_bool(
+        data.get("copy_to_clipboard", state.copy_to_clipboard), state.copy_to_clipboard
+    )
+    return state
+
+
+def save_config(state: AppState) -> None:
+    path = _config_path()
+    path.parent.mkdir(parents=True, exist_ok=True)
+
+    data: Dict[str, Any] = {
+        "source_root": str(state.source_root),
+        "output_path": str(state.output_path),
+        "max_size_kb": int(state.max_size_kb),
+        "compact_mode": bool(state.compact_mode),
+        "skip_empty": bool(state.skip_empty),
+        "use_gitignore": bool(state.use_gitignore),
+        "force_include": bool(state.force_include),
+        "include_patterns": list(state.include_patterns),
+        "exclude_patterns": list(state.exclude_patterns),
+        "tokenizer_model": str(state.tokenizer_model),
+        "enable_token_count": bool(state.enable_token_count),
+        "copy_to_clipboard": bool(state.copy_to_clipboard),
+    }
+
+    def _serialize_optional_iterable(key: str, value: Optional[Iterable[str]]) -> None:
+        if value is None:
+            return
+        data[key] = list(value)
+
+    _serialize_optional_iterable("skip_extensions", getattr(state, "skip_extensions", None))
+    _serialize_optional_iterable("skip_patterns", getattr(state, "skip_patterns", None))
+    _serialize_optional_iterable("skip_files", getattr(state, "skip_files", None))
+
+    # Use proper TOML library if available, otherwise fall back to manual construction
+    if _tomli_w is not None:
+        try:
+            with path.open("wb") as handle:
+                _tomli_w.dump(data, handle)
+            return
+        except Exception:
+            # Fall back to manual construction if TOML serialization fails
+            pass
+
+    # Fallback to manual construction if TOML library is not available or fails
+    def _escape(item: str) -> str:
+        return item.replace("\\", "\\\\").replace('"', '\\"')
+
+    lines: list[str] = []
+    for key, value in data.items():
+        if isinstance(value, bool):
+            rendered = "true" if value else "false"
+        elif isinstance(value, int):
+            rendered = str(value)
+        elif isinstance(value, (list, set)):
+            rendered = "[" + ", ".join(f'"{_escape(entry)}"' for entry in value) + "]"
+        else:
+            rendered = f'"{_escape(str(value))}"'
+        lines.append(f"{key} = {rendered}")
+
+    with path.open("w", encoding="utf-8") as handle:
+        handle.write("\n".join(lines))
+        handle.write("\n")
+
+
+__all__ = ["load_config", "apply_config", "save_config"]
+
+
+--- src/proxtract/core.py ---
+"""Core extraction logic for the Proxtract CLI."""
+
+from __future__ import annotations
+
+from collections import defaultdict
+from dataclasses import dataclass
+from pathlib import Path
+from typing import Callable, DefaultDict, Dict, Iterable, Optional, Protocol
+import fnmatch
+import os
+import tempfile
+
+try:  # Optional dependency for .gitignore support
+    import pathspec as _pathspec  # type: ignore
+except Exception:  # pragma: no cover - dependency optional
+    _pathspec = None  # type: ignore
+
+try:  # Optional dependency for token counting
+    import tiktoken as _tiktoken  # type: ignore
+except Exception:  # pragma: no cover - dependency optional
+    _tiktoken = None  # type: ignore
+
+
+class ProgressCallback(Protocol):
+    """Callable invoked to report extraction progress."""
+
+    def __call__(self, *, advance: int, description: Optional[str] = None) -> None:  # pragma: no cover - Protocol definition
+        ...
+
+
+@dataclass
+class ExtractionStats:
+    """Structured information returned after a successful extraction."""
+
+    root: Path
+    output: Path
+    processed_paths: list[str]
+    total_bytes: int
+    skipped_paths: Dict[str, list[str]]
+    errors: list[str]
+    token_count: Optional[int] = None
+    token_model: Optional[str] = None
+
+    @property
+    def processed_files(self) -> int:
+        """Backward compatible count of processed files."""
+
+        return len(self.processed_paths)
+
+    @property
+    def skipped(self) -> Dict[str, int]:
+        """Backward compatible summary of skipped files by reason."""
+
+        counts: DefaultDict[str, int] = defaultdict(int)
+        canonical_reasons = {
+            "excluded_ext",
+            "empty",
+            "too_large",
+            "binary",
+            "excluded_name",
+            "excluded_path",
+            "excluded_pattern",
+            "gitignore",
+            "not_included",
+            "other",
+        }
+        for reason, paths in self.skipped_paths.items():
+            key = reason if reason in canonical_reasons else "other"
+            count = len(paths)
+            if count:
+                counts[key] = counts.get(key, 0) + count
+        return counts
+
+    def as_dict(self) -> Dict[str, object]:
+        """Return stats in plain dict form for serialization/logging."""
+
+        result = {
+            "root": str(self.root),
+            "output": str(self.output),
+            "processed_paths": list(self.processed_paths),
+            "processed_files": self.processed_files,
+            "total_bytes": self.total_bytes,
+            "skipped_paths": {reason: list(paths) for reason, paths in self.skipped_paths.items()},
+            "skipped": dict(self.skipped),
+            "errors": list(self.errors),
+        }
+        if self.token_count is not None:
+            result["token_count"] = self.token_count
+        if self.token_model is not None:
+            result["token_model"] = self.token_model
+        return result
+
+
+class ExtractionError(RuntimeError):
+    """Raised when extraction cannot be performed."""
+
+
+class FileExtractor:
+    """Extract text-friendly files from a project tree into a single document."""
+
+    def __init__(
+        self,
+        *,
+        max_file_size_kb: int = 500,
+        skip_empty: bool = True,
+        compact_mode: bool = True,
+        use_gitignore: bool = False,
+        include_patterns: Optional[Iterable[str]] = None,
+        exclude_patterns: Optional[Iterable[str]] = None,
+        force_include: bool = False,
+        tokenizer_model: Optional[str] = None,
+        count_tokens: bool = False,
+        # Configurable filtering rules
+        skip_extensions: Optional[Iterable[str]] = None,
+        skip_patterns: Optional[Iterable[str]] = None,
+        skip_files: Optional[Iterable[str]] = None,
+    ) -> None:
+        self.max_file_size = max_file_size_kb * 1024
+        self.skip_empty = skip_empty
+        self.compact_mode = compact_mode
+        self.use_gitignore = use_gitignore
+        self.include_patterns = tuple(include_patterns or ())
+        self.exclude_patterns = tuple(exclude_patterns or ())
+        self.force_include = force_include
+        self.tokenizer_model = tokenizer_model
+        self.count_tokens = count_tokens
+
+        # Default filtering rules
+        default_extensions = {
+            ".csv", ".jpeg", ".jpg", ".png", ".gif", ".bmp", ".gitignore", ".env",
+            ".mp4", ".lgb", ".sqlite3-wal", ".sqlite3-shm", ".sqlite3", ".mkv",
+            ".webm", ".mp3", ".wav", ".flac", ".aac", ".html", ".wma", ".ico",
+            ".svg", ".zip", ".rar", ".7z", ".tar", ".gz", ".bz2", ".lock",
+            ".exe", ".dll", ".so", ".dylib", ".pdf", ".doc", ".docx", ".xls",
+            ".xlsx", ".ppt", ".pptx", ".pyc", ".pyo", ".pyd", ".pkl", ".parquet",
+            ".orc", ".avro", ".feather", ".h5", ".hdf5", ".db", ".sqlite", ".bin",
+            ".dat", ".idx", ".model", ".pt", ".ckpt", ".npy", ".npz", ".woff",
+            ".woff2", ".ttf", ".eot"
+        }
+
+        default_patterns = {
+            "__pycache__", ".git", ".svn", ".hg", "node_modules", ".vscode",
+            ".idea", ".pytest_cache", ".mypy_cache", "venv", "env", "virtualenv",
+            "dist", "build", ".next", "coverage", ".nyc_output", "vendor"
+        }
+
+        default_files = {
+            "package-lock.json", "yarn.lock", "poetry.lock", "Pipfile.lock",
+            ".DS_Store", "Thumbs.db", "desktop.ini"
+        }
+
+        def _coerce_set(values: Iterable[str]) -> set[str]:
+            return {str(entry) for entry in values}
+
+        def _coerce_extensions(values: Iterable[str]) -> set[str]:
+            return {str(entry).lower() for entry in values}
+
+        # Use provided rules or fall back to defaults
+        self.skip_extensions = (
+            _coerce_extensions(default_extensions) if skip_extensions is None else _coerce_extensions(skip_extensions)
+        )
+        self.skip_patterns = _coerce_set(default_patterns) if skip_patterns is None else _coerce_set(skip_patterns)
+        self.skip_files = _coerce_set(default_files) if skip_files is None else _coerce_set(skip_files)
+
+        self._root_path: Optional[Path] = None
+        self._gitignore_spec = None
+
+    def _rel(self, file_path: Path) -> str:
+        assert self._root_path is not None
+        return str(file_path.relative_to(self._root_path))
+
+    @staticmethod
+    def _match_any(patterns: Iterable[str], rel: str) -> bool:
+        for pattern in patterns:
+            if fnmatch.fnmatch(rel, pattern):
+                return True
+        return False
+
+    def _should_skip(self, file_path: Path, *, include_override: bool) -> tuple[bool, str]:
+        rel = self._rel(file_path)
+        include_forced = include_override and self.force_include
+
+        if not include_forced and self._match_any(self.exclude_patterns, rel):
+            return True, "excluded_pattern"
+
+        if (
+            not include_forced
+            and self._gitignore_spec is not None
+            and self._gitignore_spec.match_file(rel)  # type: ignore[union-attr]
+        ):
+            return True, "gitignore"
+
+        if self.include_patterns and not include_override:
+            return True, "not_included"
+
+        if not include_override:
+            if file_path.name in self.skip_files:
+                return True, "excluded_name"
+
+            if file_path.suffix.lower() in self.skip_extensions:
+                return True, "excluded_ext"
+
+            # Check if filename matches any skip patterns
+            rel = self._rel(file_path)
+            if self._match_any(self.skip_patterns, rel):
+                return True, "excluded_path"
+
+            for part in file_path.parts:
+                if part in self.skip_patterns or part.startswith("."):
+                    return True, "excluded_path"
+
+        try:
+            size = file_path.stat().st_size
+        except OSError as exc:  # Permission denied, etc.
+            raise ExtractionError(f"Unable to inspect file '{file_path}': {exc}") from exc
+
+        if self.skip_empty and size == 0:
+            return True, "empty"
+
+        if size > self.max_file_size:
+            return True, "too_large"
+
+        return False, ""
+
+    @staticmethod
+    def _is_text_file(file_path: Path) -> bool:
+        """Enhanced text file detection with binary detection."""
+        # Check file size first - very small files are often text
+        try:
+            size = file_path.stat().st_size
+        except OSError:
+            return False
+            
+        if size == 0:
+            return True
+            
+        # Read a reasonable chunk for analysis (limit to 8192 bytes)
+        max_bytes = min(size, 8192)
+        
+        try:
+            with open(file_path, "rb") as handle:
+                data = handle.read(max_bytes)
+        except (PermissionError, OSError):
+            return False
+            
+        # Check for common binary file signatures (magic bytes)
+        binary_signatures = {
+            # Images
+            b'\x89PNG': '.png',
+            b'\xff\xd8\xff': '.jpg',
+            b'GIF8': '.gif',
+            b'RIFF': '.webp',  # may be webp or other RIFF-based format
+            # Archives
+            b'PK\x03\x04': '.zip',
+            b'PK\x05\x06': '.zip',  # empty zip
+            b'PK\x07\x08': '.zip',  # spanned zip
+            b'RARF': '.rar',
+            b'7z\xbc\xaf\x27\x1c': '.7z',
+            b'\x1f\x8b': '.gz',
+            b'BZh': '.bz2',
+            # Documents
+            b'%PDF': '.pdf',
+            b'\xd0\xcf\x11\xe0': '.doc',  # MS Office
+            b'PK\x03\x04': '.docx',  # OOXML
+            # Audio/Video
+            b'fLaC': '.flac',
+            b'ID3': '.mp3',  # MP3 with ID3
+            b'OggS': '.ogg',
+            # Executables
+            b'MZ': '.exe',
+            b'\x7fELF': '.elf',
+            # Database files
+            b'SQLite': '.sqlite',
+            b'\x00\x00\x00\x20ftyp': '.mp4',  # MP4/M4A
+        }
+        
+        # Check for magic bytes
+        for signature in binary_signatures:
+            if data.startswith(signature):
+                return False
+                
+        # Check for null bytes (strong indicator of binary content)
+        # But allow null bytes in specific file types that might contain them
+        if b'\x00' in data:
+            # Additional check: if file is mostly null bytes, it's definitely binary
+            null_ratio = data.count(b'\x00') / len(data)
+            if null_ratio > 0.1:  # More than 10% null bytes
+                return False
+                
+        # Try to decode as text with different encodings
+        encodings = ["utf-8", "utf-8-sig", "cp1252", "latin-1", "cp1251"]
+        for encoding in encodings:
+            try:
+                decoded = data.decode(encoding)
+                # Additional check: if decoded content contains too many control
+                # characters (except common ones like \n, \r, \t), it might be binary
+                control_chars = sum(1 for c in decoded if (not c.isprintable()) and c not in '\n\r\t')
+                control_ratio = control_chars / len(decoded) if decoded else 0
+                if control_ratio > 0.1:  # More than 10% control characters
+                    continue
+                return True
+            except UnicodeDecodeError:
+                continue
+                
+        return False
+
+    @staticmethod
+    def _read_file_content(file_path: Path) -> str:
+        encodings = ["utf-8", "cp1251", "latin-1"]
+        for encoding in encodings:
+            try:
+                with open(file_path, "r", encoding=encoding) as handle:
+                    return handle.read()
+            except (UnicodeDecodeError, PermissionError):
+                continue
+        return "[ERROR: Could not decode file]"
+
+    def _format_compact(self, relative_path: Path, content: str) -> str:
+        return f"\n--- {relative_path} ---\n{content}\n"
+
+    def _format_standard(self, relative_path: Path, content: str) -> str:
+        separator = "=" * 60
+        return f"\n{separator}\nFILE: {relative_path}\n{separator}\n{content}\n\n"
+
+    def extract(
+        self,
+        root_dir: str | Path,
+        output_file: str | Path,
+        *,
+        progress_callback: Optional[ProgressCallback] = None,
+    ) -> ExtractionStats:
+        """Extract text files into a single document.
+
+        Args:
+            root_dir: Directory to scan.
+            output_file: Destination file path.
+            progress_callback: Optional callable compatible with
+                ``rich.progress.Progress.update``. It receives keyword arguments
+                ``advance`` (int) and ``description`` (str) describing the current file.
+
+        Returns:
+            ``ExtractionStats`` describing the operation.
+
+        Raises:
+            ExtractionError: If the root directory is invalid or I/O fails.
+        """
+
+        root_path = Path(root_dir).expanduser().resolve()
+        if not root_path.exists() or not root_path.is_dir():
+            raise ExtractionError(f"'{root_dir}' is not a valid directory")
+
+        output_path = Path(output_file).expanduser().resolve()
+        output_path.parent.mkdir(parents=True, exist_ok=True)
+
+        self._root_path = root_path
+        self._gitignore_spec = None
+        gitignore_error: Optional[str] = None
+        if self.use_gitignore:
+            if _pathspec is None:
+                gitignore_error = "use_gitignore enabled but 'pathspec' is not installed"
+            else:
+                gitignore_path = root_path / ".gitignore"
+                try:
+                    lines: Iterable[str] = ()
+                    if gitignore_path.exists():
+                        lines = gitignore_path.read_text(encoding="utf-8").splitlines()
+                    self._gitignore_spec = _pathspec.PathSpec.from_lines("gitwildmatch", lines)
+                except Exception as exc:  # pragma: no cover - defensive guard
+                    gitignore_error = f"Failed to load .gitignore: {exc}"
+
+        skipped_paths: DefaultDict[str, list[str]] = defaultdict(list)
+        processed_paths: list[str] = []
+        total_bytes = 0
+        errors: list[str] = []
+        if gitignore_error is not None:
+            errors.append(gitignore_error)
+
+        token_count: Optional[int] = None
+        token_model: Optional[str] = None
+        encoder = None
+
+        temp_path: Optional[Path] = None
+        temp_path_resolved: Optional[Path] = None
+
+        try:
+            with tempfile.NamedTemporaryFile(
+                mode="w",
+                encoding="utf-8",
+                delete=False,
+                dir=str(output_path.parent),
+                prefix=f"{output_path.name}.",
+                suffix=".tmp",
+            ) as destination:
+                temp_path = Path(destination.name)
+                temp_path_resolved = temp_path.resolve()
+                destination.write(f"# Extracted from: {root_path}\n")
+                destination.write(f"# Max file size: {self.max_file_size // 1024}KB\n")
+                destination.write(f"# Mode: {'compact' if self.compact_mode else 'standard'}\n")
+                destination.write("=" * 60 + "\n")
+                if self.use_gitignore:
+                    destination.write(f"# Gitignore: {'on' if self._gitignore_spec is not None else 'off'}\n")
+                if self.include_patterns:
+                    destination.write(f"# Include patterns: {', '.join(self.include_patterns)}\n")
+                if self.exclude_patterns:
+                    destination.write(f"# Exclude patterns: {', '.join(self.exclude_patterns)}\n")
+
+                encoder = None
+                token_count = None
+                token_model = None
+                if self.count_tokens:
+                    if _tiktoken is None:
+                        errors.append("Token counting enabled but 'tiktoken' is not installed")
+                    else:
+                        try:
+                            token_model = self.tokenizer_model or "gpt-4"
+                            try:
+                                encoder = _tiktoken.encoding_for_model(token_model)
+                            except Exception:
+                                encoder = _tiktoken.get_encoding("cl100k_base")
+                            token_count = 0
+                        except Exception as exc:  # pragma: no cover - defensive
+                            errors.append(f"Failed to initialize tokenizer: {exc}")
+                            encoder = None
+
+                def report(description: str) -> None:
+                    if progress_callback is None:
+                        return
+                    try:
+                        progress_callback(advance=1, description=description)
+                    except TypeError:
+                        progress_callback(1)  # type: ignore[misc]
+
+                for file_path in sorted(root_path.rglob("*")):
+                    if not file_path.is_file():
+                        continue
+
+                    relative_path = file_path.relative_to(root_path)
+                    relative_str = str(relative_path)
+
+                    if temp_path_resolved is not None and file_path.resolve() == temp_path_resolved:
+                        continue
+                    if file_path.resolve() == output_path:
+                        report(f"Skipping {relative_str}")
+                        continue
+
+                    include_override = False
+                    if self.include_patterns:
+                        include_override = self._match_any(self.include_patterns, relative_str)
+
+                    try:
+                        skip, reason = self._should_skip(file_path, include_override=include_override)
+                    except ExtractionError as exc:
+                        errors.append(str(exc))
+                        skipped_paths["other"].append(relative_str)
+                        report(f"Skipping {relative_str}")
+                        continue
+
+                    if skip:
+                        skipped_key = reason or "other"
+                        skipped_paths[skipped_key].append(relative_str)
+                        report(f"Skipping {relative_str}")
+                        continue
+
+                    if not self._is_text_file(file_path):
+                        skipped_paths["binary"].append(relative_str)
+                        report(f"Skipping {relative_str}")
+
+                        continue
+
+                    content = self._read_file_content(file_path)
+
+                    formatter = self._format_compact if self.compact_mode else self._format_standard
+                    destination.write(formatter(relative_path, content))
+
+                    processed_paths.append(relative_str)
+                    total_bytes += len(content)
+
+                    if encoder is not None and token_count is not None:
+                        try:
+                            token_count += len(encoder.encode(content))
+                        except Exception:  # pragma: no cover - tokenizer fallback
+                            pass
+
+                    report(relative_str)
+
+                destination.write(f"\n{'=' * 60}\n")
+                destination.write(f"# Total files processed: {len(processed_paths)}\n")
+                destination.write(f"# Total size: {total_bytes // 1024}KB\n")
+                if token_count is not None:
+                    destination.write(f"# Total tokens: {token_count}\n")
+                destination.flush()
+                os.fsync(destination.fileno())
+
+            if temp_path is None:
+                raise ExtractionError("Failed to create temporary output file")
+
+            os.replace(temp_path, output_path)
+
+        except ExtractionError:
+            if temp_path is not None:
+                try:
+                    temp_path.unlink(missing_ok=True)
+                except OSError:
+                    pass
+            raise
+        except OSError as exc:
+            if temp_path is not None:
+                try:
+                    temp_path.unlink(missing_ok=True)
+                except OSError:
+                    pass
+            raise ExtractionError(str(exc)) from exc
+        except Exception:
+            if temp_path is not None:
+                try:
+                    temp_path.unlink(missing_ok=True)
+                except OSError:
+                    pass
+            raise
+        finally:
+            self._root_path = None
+            self._gitignore_spec = None
+
+        stats = ExtractionStats(
+            root=root_path,
+            output=output_path,
+            processed_paths=list(processed_paths),
+            total_bytes=total_bytes,
+            skipped_paths={reason: list(paths) for reason, paths in skipped_paths.items()},
+            errors=errors,
+        )
+
+        if token_count is not None:
+            stats.token_count = token_count
+            stats.token_model = token_model
+
+        return stats
+
+
+__all__ = ["FileExtractor", "ExtractionError", "ExtractionStats"]
+
+
+--- src/proxtract/main.py ---
+"""Entry point for launching the Proxtract CLI and TUI."""
+
+from __future__ import annotations
+
+import argparse
+import sys
+from pathlib import Path
+from typing import Optional, Sequence
+
+from rich.console import Console
+
+from .state import AppState
+from .tui.app import ProxtractApp
+
+try:  # Shell auto-completion support
+    import argcomplete  # type: ignore
+    from argcomplete.completers import FilesCompleter  # type: ignore
+except Exception:  # pragma: no cover - degrade gracefully if unavailable
+    argcomplete = None  # type: ignore[assignment]
+    FilesCompleter = None  # type: ignore[assignment]
+
+try:  # Config helpers are optional if tomllib/tomli missing
+    from .config import apply_config, load_config, save_config as _save_config
+except Exception:  # pragma: no cover - fallback when persistence unavailable
+    apply_config = lambda state, data: state  # type: ignore
+    load_config = lambda: {}  # type: ignore
+    _save_config = None  # type: ignore
+def _run_cli_extract(args: argparse.Namespace, console: Console) -> int:
+    state = apply_config(AppState(), load_config())
+
+    if args.output:
+        state.set_output_path(args.output)
+    if args.max_size is not None:
+        state.max_size_kb = args.max_size
+    if args.compact:
+        state.compact_mode = True
+    elif args.no_compact:
+        state.compact_mode = False
+    if args.skip_empty:
+        state.skip_empty = True
+    elif args.no_skip_empty:
+        state.skip_empty = False
+    if args.use_gitignore:
+        state.use_gitignore = True
+    elif args.no_gitignore:
+        state.use_gitignore = False
+    if args.include:
+        state.include_patterns = [str(pattern) for pattern in args.include]
+    if args.exclude:
+        state.exclude_patterns = [str(pattern) for pattern in args.exclude]
+    if args.force_include:
+        state.force_include = True
+    elif args.no_force_include:
+        state.force_include = False
+    if args.tokenizer_model:
+        state.tokenizer_model = args.tokenizer_model
+    if args.no_token_count:
+        state.enable_token_count = False
+    if args.copy:
+        state.copy_to_clipboard = True
+
+    extractor = state.create_extractor()
+    root = Path(args.path).expanduser()
+    output = state.output_path
+
+    console.print(f"[bold]Extracting[/bold] from [cyan]{root}[/cyan] to [green]{output}[/green] ...")
+    try:
+        stats = extractor.extract(root, output)
+    except Exception as exc:
+        console.print(f"[red]Extraction failed:[/red] {exc}")
+        return 2
+
+    console.print(
+        "[bold green]Done.[/bold green] "
+        + f"Files: {stats.processed_files}, Size: {stats.total_bytes} bytes"
+        + (f", Tokens: {stats.token_count}" if stats.token_count is not None else "")
+    )
+    if stats.errors:
+        console.print(f"[yellow]Warnings ({len(stats.errors)}):[/yellow]")
+        for warning in stats.errors:
+            console.print(f"  • {warning}")
+
+    if state.copy_to_clipboard or args.copy:
+        try:
+            import pyperclip  # type: ignore
+
+            try:
+                contents = Path(stats.output).read_text(encoding="utf-8")
+                pyperclip.copy(contents)
+                console.print("[green]Copied extracted content to clipboard.[/green]")
+            except Exception as exc:  # pragma: no cover - environment specific
+                console.print(f"[yellow]Failed to copy to clipboard:[/yellow] {exc}")
+        except Exception:
+            console.print("[yellow]pyperclip not installed; cannot copy to clipboard.[/yellow]")
+
+    if args.save_config and _save_config is not None:
+        try:
+            _save_config(state)
+            console.print("[green]Settings saved.[/green]")
+        except Exception as exc:  # pragma: no cover - persistence is best-effort
+            console.print(f"[yellow]Failed to save settings:[/yellow] {exc}")
+
+    return 0
+
+
+def _launch_tui() -> None:
+    state = apply_config(AppState(), load_config())
+    ProxtractApp(state).run()
+
+
+def main(argv: Optional[Sequence[str]] = None) -> None:
+    program_name = Path(sys.argv[0]).name or "proxtract"
+    parser = argparse.ArgumentParser(prog=program_name, allow_abbrev=False)
+    subparsers = parser.add_subparsers(dest="command")
+
+    p_extract = subparsers.add_parser("extract", help="Run a one-off extraction", aliases=["e"])
+    p_extract.set_defaults(command="extract")
+    path_argument = p_extract.add_argument("path", help="Root directory to extract")
+    output_argument = p_extract.add_argument("--output", "-o", help="Output file path")
+    p_extract.add_argument("--max-size", type=int, help="Maximum file size in KB")
+    group_compact = p_extract.add_mutually_exclusive_group()
+    group_compact.add_argument("--compact", action="store_true", help="Enable compact formatting")
+    group_compact.add_argument("--no-compact", action="store_true", help="Disable compact formatting")
+    group_empty = p_extract.add_mutually_exclusive_group()
+    group_empty.add_argument("--skip-empty", action="store_true", help="Skip empty files")
+    group_empty.add_argument("--no-skip-empty", action="store_true", help="Do not skip empty files")
+    group_gitignore = p_extract.add_mutually_exclusive_group()
+    group_gitignore.add_argument("--use-gitignore", dest="use_gitignore", action="store_true", help="Respect .gitignore rules")
+    group_gitignore.add_argument("--no-gitignore", dest="no_gitignore", action="store_true", help="Ignore .gitignore rules")
+    p_extract.add_argument("--include", action="append", help="Include glob pattern (repeatable)")
+    p_extract.add_argument("--exclude", action="append", help="Exclude glob pattern (repeatable)")
+    group_force = p_extract.add_mutually_exclusive_group()
+    group_force.add_argument(
+        "--force-include",
+        dest="force_include",
+        action="store_true",
+        help="Allow include patterns to bypass exclude rules and .gitignore",
+    )
+    group_force.add_argument(
+        "--no-force-include",
+        dest="no_force_include",
+        action="store_true",
+        help="Do not allow include patterns to bypass exclude rules",
+    )
+    tokenizer_argument = p_extract.add_argument("--tokenizer-model", help="Tokenizer model for token counting")
+    p_extract.add_argument("--no-token-count", action="store_true", help="Disable token counting")
+    p_extract.add_argument("--copy", action="store_true", help="Copy result to clipboard")
+    p_extract.add_argument("--save-config", action="store_true", help="Persist current settings")
+
+    args_list = list(sys.argv[1:] if argv is None else argv)
+
+    if FilesCompleter is not None:  # pragma: no cover - requires argcomplete at runtime
+        try:
+            path_argument.completer = FilesCompleter(directories=True)  # type: ignore[attr-defined]
+            output_argument.completer = FilesCompleter()  # type: ignore[attr-defined]
+        except Exception:
+            pass
+
+    if argv is None and argcomplete is not None:  # pragma: no cover - requires argcomplete at runtime
+        try:
+            from argcomplete.completers import ChoicesCompleter  # type: ignore
+        except Exception:
+            ChoicesCompleter = None  # type: ignore[assignment]
+        else:
+            token_models = ["gpt-4o-mini", "gpt-4o", "gpt-3.5-turbo", "o200k_base"]
+            tokenizer_argument.completer = ChoicesCompleter(token_models)  # type: ignore[attr-defined]
+
+        argcomplete.autocomplete(parser)  # type: ignore[call-arg]
+
+    if not args_list:
+        _launch_tui()
+        return
+
+    args = parser.parse_args(args_list)
+
+    if args.command == "extract":
+        raise SystemExit(_run_cli_extract(args, Console()))
+
+    _launch_tui()
+
+
+if __name__ == "__main__":  # pragma: no cover
+    main()
+
+
+--- src/proxtract/state.py ---
+"""Session state management for the Proxtract TUI and CLI."""
+
+from __future__ import annotations
+
+from dataclasses import dataclass, field
+from pathlib import Path
+from typing import Optional, Sequence
+
+from .core import ExtractionStats, FileExtractor
+
+
+@dataclass
+class AppState:
+    """Mutable configuration shared across TUI widgets and CLI commands."""
+
+    source_root: Path = field(default_factory=lambda: Path.cwd())
+    output_path: Path = field(default_factory=lambda: Path("extracted.txt"))
+    max_size_kb: int = 500
+    compact_mode: bool = True
+    skip_empty: bool = True
+    use_gitignore: bool = True
+    include_patterns: list[str] = field(default_factory=list)
+    exclude_patterns: list[str] = field(default_factory=list)
+    force_include: bool = False
+    # Filtering rules - configurable via settings.toml
+    skip_extensions: Optional[set[str]] = None
+    skip_patterns: Optional[set[str]] = None
+    skip_files: Optional[set[str]] = None
+    tokenizer_model: str = "gpt-4"
+    enable_token_count: bool = True
+    copy_to_clipboard: bool = False
+    last_stats: Optional[ExtractionStats] = None
+
+    def create_extractor(self) -> FileExtractor:
+        """Instantiate a ``FileExtractor`` with the current settings."""
+
+        return FileExtractor(
+            max_file_size_kb=self.max_size_kb,
+            skip_empty=self.skip_empty,
+            compact_mode=self.compact_mode,
+            use_gitignore=self.use_gitignore,
+            include_patterns=self.include_patterns,
+            exclude_patterns=self.exclude_patterns,
+            force_include=self.force_include,
+            tokenizer_model=self.tokenizer_model,
+            count_tokens=self.enable_token_count,
+            skip_extensions=None if self.skip_extensions is None else set(self.skip_extensions),
+            skip_patterns=None if self.skip_patterns is None else set(self.skip_patterns),
+            skip_files=None if self.skip_files is None else set(self.skip_files),
+        )
+
+    def set_output_path(self, path: str | Path) -> None:
+        self.output_path = Path(path).expanduser()
+
+    def set_source_root(self, path: str | Path) -> None:
+        self.source_root = Path(path).expanduser()
+
+    def set_patterns(
+        self,
+        *,
+        include: Optional[Sequence[str]] = None,
+        exclude: Optional[Sequence[str]] = None,
+    ) -> None:
+        if include is not None:
+            self.include_patterns = [str(p) for p in include]
+        if exclude is not None:
+            self.exclude_patterns = [str(p) for p in exclude]
+
+
+__all__ = ["AppState"]
+
+
+--- src/proxtract/tui/__init__.py ---
+"""Textual TUI package for Proxtract."""
+
+from pathlib import Path
+
+STYLES_PATH = Path(__file__).resolve().parent / "styles.tcss"
+
+from .app import ProxtractApp
+
+__all__ = ["ProxtractApp", "STYLES_PATH"]
+
+
+--- src/proxtract/tui/app.py ---
+"""Textual application shell for Proxtract."""
+
+from __future__ import annotations
+
+from typing import Optional
+
+from textual.app import App
+
+from ..state import AppState
+from . import STYLES_PATH
+from .screens import MainScreen
+
+try:  # Config persistence may be unavailable in minimalist installs
+    from ..config import save_config as _save_config
+except Exception:  # pragma: no cover - optional dependency missing
+    _save_config = None  # type: ignore[assignment]
+
+
+class ProxtractApp(App[None]):
+    """Textual front-end that wraps the Proxtract extraction workflow."""
+
+    CSS_PATH = STYLES_PATH
+    BINDINGS = [
+        ("q", "quit", "Quit"),
+        ("ctrl+s", "save", "Save"),
+    ]
+
+    def __init__(self, app_state: AppState, *, title: Optional[str] = None) -> None:
+        super().__init__()
+        self.app_state = app_state
+        self.title = title or "Proxtract"
+
+    async def on_mount(self) -> None:
+        self.push_screen(MainScreen(self.app_state))
+
+    def action_quit(self) -> None:
+        """Persist settings (when available) and exit."""
+
+        if _save_config is not None:
+            try:
+                _save_config(self.app_state)
+            except Exception as exc:  # pragma: no cover - defensive best effort
+                self.notify(f"Failed to save settings: {exc}", severity="warning")
+        self.exit()
+
+    def action_save(self) -> None:
+        """Persist the current settings, if the config helper is available."""
+
+        if _save_config is None:
+            self.notify("Configuration persistence is unavailable.", severity="warning")
+            return
+
+        try:
+            _save_config(self.app_state)
+        except Exception as exc:  # pragma: no cover - defensive best effort
+            self.notify(f"Failed to save settings: {exc}", severity="error")
+        else:
+            self.notify("Settings saved.", severity="information")
+
+
+__all__ = ["ProxtractApp"]
+
+
+--- src/proxtract/tui/screens/__init__.py ---
+"""Screens used by the Proxtract Textual application."""
+
+from .main_screen import MainScreen
+from .settings_screen import SettingsScreen
+from .summary_screen import SummaryScreen
+
+__all__ = ["MainScreen", "SettingsScreen", "SummaryScreen"]
+
+
+--- src/proxtract/tui/screens/main_screen.py ---
+"""Focused extractor-first screen for the Proxtract TUI."""
+
+from __future__ import annotations
+
+from dataclasses import dataclass
+from functools import partial
+from pathlib import Path
+from typing import Optional
+
+from textual import events
+from textual.app import ComposeResult
+from textual.containers import Horizontal, Vertical
+from textual.message import Message
+from textual.screen import Screen
+from textual.widgets import Button, Footer, Header, Label, ProgressBar
+from textual.worker import Worker, WorkerState
+
+from ...core import ExtractionError, ExtractionStats
+from ...state import AppState
+from ..widgets import CompletionInput, SummaryDisplay
+from .settings_screen import SettingsScreen
+from .summary_screen import SummaryScreen
+
+
+class MainScreen(Screen):
+    """Single-screen extractor workflow with progressive disclosure controls."""
+
+    ID = "main"
+    TINY_WIDTH = 45
+    NARROW_WIDTH = 80
+    COMPACT_WIDTH = 60
+
+    @dataclass
+    class ExtractionProgress(Message):
+        processed: int
+        total: int
+        description: str
+
+    @dataclass
+    class ExtractionStarted(Message):
+        total: int
+
+    @dataclass
+    class ExtractionFailed(Message):
+        message: str
+
+    @dataclass
+    class ExtractionCompleted(Message):
+        stats: ExtractionStats
+
+    def __init__(self, app_state: AppState) -> None:
+        super().__init__(id=self.ID)
+        self.app_state = app_state
+        self._source_input: CompletionInput | None = None
+        self._output_input: CompletionInput | None = None
+        self._extract_button: Button | None = None
+        self._settings_button: Button | None = None
+        self._progress_bar: ProgressBar | None = None
+        self._status_label: Label | None = None
+        self._summary_widget: SummaryDisplay | None = None
+        self._summary_container: Vertical | None = None
+        self._worker: Worker | None = None
+
+    def compose(self) -> ComposeResult:
+        yield Header(show_clock=False)
+        yield Vertical(
+            Label("Proxtract", id="title"),
+            Label("Укажите проект и получите все его файлы в одном пакете.", id="subtitle"),
+            Vertical(
+                Vertical(
+                    Label("Директория проекта", classes="form-label"),
+                    CompletionInput(id="source-input", mode="path", classes="form-input"),
+                    classes="form-field",
+                ),
+                Vertical(
+                    Label("Выходной файл", classes="form-label"),
+                    CompletionInput(id="output-input", mode="path", classes="form-input"),
+                    classes="form-field",
+                ),
+                Horizontal(
+                    Button("Извлечь", id="extract", variant="primary"),
+                    Button("Настройки", id="settings", variant="primary"),
+                    id="form-actions",
+                ),
+                ProgressBar(id="extract-progress", total=100),
+                Label("Готово к запуску.", id="extract-status"),
+                Vertical(
+                    Label("Сводка последнего запуска", id="summary-header"),
+                    SummaryDisplay(),
+                    id="summary-section",
+                ),
+                id="extractor-form",
+                classes="panel-card",
+            ),
+            id="main-body",
+        )
+        yield Footer()
+
+    def on_mount(self) -> None:
+        self._source_input = self.query_one("#source-input", CompletionInput)
+        self._output_input = self.query_one("#output-input", CompletionInput)
+        self._extract_button = self.query_one("#extract", Button)
+        self._settings_button = self.query_one("#settings", Button)
+        self._progress_bar = self.query_one(ProgressBar)
+        self._status_label = self.query_one("#extract-status", Label)
+        self._summary_widget = self.query_one(SummaryDisplay)
+        self._summary_container = self.query_one("#summary-section", Vertical)
+
+        self._source_input.value = str(self.app_state.source_root)
+        self._output_input.value = str(self.app_state.output_path)
+        self._source_input.focus()
+
+        if self._progress_bar is not None:
+            self._progress_bar.display = False
+
+        if self.app_state.last_stats is not None and self._summary_widget is not None:
+            self._summary_widget.update_stats(self.app_state.last_stats)
+        self._update_summary_visibility(self.app_state.last_stats is not None)
+        self._update_breakpoints(self.size.width if self.size is not None else None)
+
+    def on_resize(self, event: events.Resize) -> None:
+        self._update_breakpoints(event.size.width)
+
+    def on_button_pressed(self, event: Button.Pressed) -> None:
+        if event.button.id == "extract":
+            if self._worker is not None and self._worker.is_running:
+                self._cancel_extraction()
+            else:
+                self._begin_extraction()
+        elif event.button.id == "settings":
+            self.app.push_screen(
+                SettingsScreen(self.app_state),
+                callback=lambda _: self._handle_settings_closed(),
+            )
+
+    def _handle_settings_closed(self) -> None:
+        if self._output_input is not None:
+            self._output_input.value = str(self.app_state.output_path)
+
+    def _begin_extraction(self) -> None:
+        if self._source_input is None or self._output_input is None:
+            return
+
+        root_text = (self._source_input.value or "").strip()
+        output_text = (self._output_input.value or "").strip()
+
+        if not root_text or not output_text:
+            self.app.notify("Укажите исходную директорию и выходной файл.", severity="warning")
+            return
+
+        root = Path(root_text).expanduser()
+        if not root.exists() or not root.is_dir():
+            self.app.notify("Указанная директория недоступна.", severity="error")
+            return
+
+        self.app_state.set_source_root(root)
+        self.app_state.set_output_path(output_text)
+
+        if self._progress_bar is not None:
+            self._progress_bar.display = True
+            self._progress_bar.update(progress=0, total=100)
+        self._update_status("Подготовка к извлечению…")
+        self._set_busy(True)
+
+        work = partial(self._execute_extraction, root, self.app_state.output_path)
+        self._worker = self.run_worker(
+            work,
+            name=str(root),
+            group=str(self.app_state.output_path),
+            exclusive=True,
+            thread=True,
+            exit_on_error=False,
+        )
+
+    def _cancel_extraction(self) -> None:
+        if self._worker is None:
+            return
+        if self._worker.is_running:
+            self._worker.cancel()
+        self._update_status("Отмена…")
+
+    def _execute_extraction(self, root: Path, output: Path) -> None:
+        self.app.call_from_thread(self._update_status, "Сканирование файлов…")
+
+        try:
+            total_files = sum(1 for path in root.rglob("*") if path.is_file())
+        except Exception as exc:  # pragma: no cover
+            self.app.call_from_thread(self.post_message, self.ExtractionFailed(str(exc)))
+            return
+
+        self.app.call_from_thread(self.post_message, self.ExtractionStarted(total=max(total_files, 1)))
+
+        processed = 0
+
+        def progress_callback(*, advance: int, description: Optional[str] = None) -> None:
+            nonlocal processed
+            processed += advance
+            self.app.call_from_thread(
+                self.post_message,
+                self.ExtractionProgress(
+                    processed=processed,
+                    total=max(total_files, 1),
+                    description=description or "",
+                ),
+            )
+
+        extractor = self.app_state.create_extractor()
+
+        try:
+            stats = extractor.extract(root, output, progress_callback=progress_callback)
+        except ExtractionError as exc:
+            self.app.call_from_thread(self.post_message, self.ExtractionFailed(str(exc)))
+            return
+
+        if total_files == 0 and processed == 0:
+            processed = 1
+            self.app.call_from_thread(
+                self.post_message,
+                self.ExtractionProgress(processed=processed, total=1, description=""),
+            )
+
+        self.app_state.last_stats = stats
+        self.app.call_from_thread(self.post_message, self.ExtractionCompleted(stats))
+
+    def on_main_screen_extraction_started(self, message: ExtractionStarted) -> None:
+        if self._progress_bar is not None:
+            self._progress_bar.update(progress=0, total=message.total)
+        self._update_status("Сканирование файлов…")
+
+    def on_main_screen_extraction_progress(self, message: ExtractionProgress) -> None:
+        if self._progress_bar is not None:
+            self._progress_bar.update(progress=message.processed, total=message.total)
+        if message.description:
+            self._update_status(f"Обработка: {message.description}")
+
+    def on_main_screen_extraction_failed(self, message: ExtractionFailed) -> None:
+        self._reset_busy_state()
+        self._update_status(f"Ошибка: {message.message}")
+        self.app.notify(f"Извлечение не удалось: {message.message}", severity="error")
+
+    def on_main_screen_extraction_completed(self, message: ExtractionCompleted) -> None:
+        self._reset_busy_state()
+        if self._summary_widget is not None:
+            self._summary_widget.update_stats(message.stats)
+        self._update_summary_visibility(True)
+        self._update_status("Извлечение завершено.")
+        self.app.push_screen(SummaryScreen(message.stats))
+
+    def on_worker_state_changed(self, event: Worker.StateChanged) -> None:
+        if self._worker is None or event.worker is not self._worker:
+            return
+
+        if event.state == WorkerState.RUNNING:
+            return
+
+        self._worker = None
+        if event.state == WorkerState.CANCELLED:
+            self._reset_busy_state()
+            self._update_status("Извлечение отменено.")
+            event.stop()
+            return
+
+        if event.state == WorkerState.ERROR:
+            self._reset_busy_state()
+            error = event.worker.error
+            message = str(error) if error is not None else "Неизвестная ошибка."
+            self._update_status(f"Ошибка: {message}")
+            self.app.notify(f"Извлечение не удалось: {message}", severity="error")
+            event.stop()
+
+    def _reset_busy_state(self) -> None:
+        self._set_busy(False)
+        if self._progress_bar is not None:
+            self._progress_bar.display = False
+
+    def _set_busy(self, busy: bool) -> None:
+        if self._source_input is not None:
+            self._source_input.disabled = busy
+        if self._output_input is not None:
+            self._output_input.disabled = busy
+        if self._settings_button is not None:
+            self._settings_button.disabled = busy
+        if self._extract_button is not None:
+            self._extract_button.label = "Отмена" if busy else "Извлечь"
+            self._extract_button.variant = "error" if busy else "primary"
+        if busy and self._progress_bar is not None:
+            self._progress_bar.display = True
+
+    def _update_status(self, message: str) -> None:
+        if self._status_label is not None:
+            self._status_label.update(message)
+
+    def _update_summary_visibility(self, show: bool) -> None:
+        if self._summary_container is None:
+            return
+        self._summary_container.display = show
+
+    def _update_breakpoints(self, width: int | None) -> None:
+        self.set_class(False, "bp-tiny")
+        self.set_class(False, "bp-narrow")
+        self.set_class(False, "bp-compact")
+
+        if width is None:
+            return
+        if width <= self.TINY_WIDTH:
+            self.set_class(True, "bp-tiny")
+        elif width <= self.COMPACT_WIDTH:
+            self.set_class(True, "bp-compact")
+        elif width <= self.NARROW_WIDTH:
+            self.set_class(True, "bp-narrow")
+
+
+__all__ = ["MainScreen"]
+
+
+--- src/proxtract/tui/screens/settings_screen.py ---
+"""Modal settings screen that groups advanced options."""
+
+from __future__ import annotations
+
+from textual.app import ComposeResult
+from textual.containers import Horizontal, Vertical
+from textual.screen import ModalScreen
+from textual.widgets import Button, Input, Label, Switch
+
+from ...state import AppState
+from .. import STYLES_PATH
+from ..widgets import CompletionInput
+
+
+class SettingsScreen(ModalScreen[bool]):
+    """Expose the full configuration as a modal with progressive disclosure."""
+
+    CSS_PATH = STYLES_PATH
+
+    def __init__(self, app_state: AppState) -> None:
+        super().__init__(id="settings-screen")
+        self.app_state = app_state
+
+    def compose(self) -> ComposeResult:
+        include_text = ", ".join(self.app_state.include_patterns)
+        exclude_text = ", ".join(self.app_state.exclude_patterns)
+
+        yield Vertical(
+            Vertical(
+                Label("Настройки", id="settings-title"),
+                Label("Управляйте расширенными параметрами извлечения.", id="settings-description"),
+                id="settings-header",
+            ),
+            Vertical(
+                Label("Основные", classes="group-title"),
+                Vertical(
+                    Label("Макс. размер файла (КБ)", classes="form-label"),
+                    Input(
+                        id="max-size",
+                        value=str(self.app_state.max_size_kb),
+                        placeholder="500",
+                    ),
+                    classes="form-field",
+                ),
+                self._switch_row("compact-mode", "Компактный режим", self.app_state.compact_mode),
+                self._switch_row("skip-empty", "Пропускать пустые файлы", self.app_state.skip_empty),
+                classes="settings-group",
+            ),
+            Vertical(
+                Label("Фильтрация", classes="group-title"),
+                self._switch_row("use-gitignore", "Использовать .gitignore", self.app_state.use_gitignore),
+                Vertical(
+                    Label("Шаблоны для включения", classes="form-label"),
+                    CompletionInput(
+                        id="include-patterns",
+                        mode="list",
+                        value=include_text,
+                        placeholder="src/**/*.py, *.md",
+                    ),
+                    classes="form-field",
+                ),
+                Vertical(
+                    Label("Шаблоны для исключения", classes="form-label"),
+                    CompletionInput(
+                        id="exclude-patterns",
+                        mode="list",
+                        value=exclude_text,
+                        placeholder="*.log, build/**",
+                    ),
+                    classes="form-field",
+                ),
+                self._switch_row(
+                    "force-include",
+                    "Приоритет включения над исключением",
+                    self.app_state.force_include,
+                ),
+                classes="settings-group",
+            ),
+            Vertical(
+                Label("Дополнительно", classes="group-title"),
+                self._switch_row(
+                    "count-tokens",
+                    "Считать токены",
+                    self.app_state.enable_token_count,
+                ),
+                Vertical(
+                    Label("Модель токенизатора", classes="form-label"),
+                    CompletionInput(
+                        id="tokenizer-model",
+                        value=self.app_state.tokenizer_model,
+                        suggestions=["gpt-4o-mini", "gpt-4o", "gpt-3.5-turbo", "o200k_base"],
+                    ),
+                    classes="form-field",
+                ),
+                self._switch_row(
+                    "copy-to-clipboard",
+                    "Копировать результат в буфер",
+                    self.app_state.copy_to_clipboard,
+                ),
+                classes="settings-group",
+            ),
+            Horizontal(
+                Button("Отмена", id="cancel-settings"),
+                Button("Сохранить", id="save-settings", variant="primary"),
+                id="settings-buttons",
+            ),
+            id="settings-container",
+            classes="modal-card modal-large",
+        )
+
+    def on_button_pressed(self, event: Button.Pressed) -> None:
+        if event.button.id == "cancel-settings":
+            self.dismiss(False)
+        elif event.button.id == "save-settings":
+            self._apply_changes()
+
+    def _apply_changes(self) -> None:
+        max_size_text = self.query_one("#max-size", Input).value.strip()
+        max_size = self._parse_int(max_size_text, fallback=self.app_state.max_size_kb)
+        if max_size <= 0:
+            self.app.notify("Максимальный размер должен быть положительным числом.", severity="warning")
+            return
+
+        self.app_state.max_size_kb = max_size
+        self.app_state.compact_mode = self._switch_value("compact-mode")
+        self.app_state.skip_empty = self._switch_value("skip-empty")
+        self.app_state.use_gitignore = self._switch_value("use-gitignore")
+        self.app_state.force_include = self._switch_value("force-include")
+        self.app_state.enable_token_count = self._switch_value("count-tokens")
+        self.app_state.copy_to_clipboard = self._switch_value("copy-to-clipboard")
+
+        include_text = self.query_one("#include-patterns", CompletionInput).value or ""
+        exclude_text = self.query_one("#exclude-patterns", CompletionInput).value or ""
+        tokenizer_model = self.query_one("#tokenizer-model", CompletionInput).value.strip() or self.app_state.tokenizer_model
+
+        self.app_state.include_patterns = self._split_list(include_text)
+        self.app_state.exclude_patterns = self._split_list(exclude_text)
+        self.app_state.tokenizer_model = tokenizer_model
+
+        self.app.notify("Настройки обновлены.", severity="information")
+        self.dismiss(True)
+
+    def on_switch_changed(self, event: Switch.Changed) -> None:
+        state_id = f"#{event.switch.id}-state"
+        try:
+            state_label = self.query_one(state_id, Label)
+        except Exception:  # textual versions <0.60 may emit different exceptions
+            return
+        state_label.update(self._state_text(event.value))
+
+    def _switch_row(self, switch_id: str, label: str, value: bool) -> Horizontal:
+        return Horizontal(
+            Switch(value=value, id=switch_id),
+            Label(label, classes="switch-label"),
+            Label(self._state_text(value), id=f"{switch_id}-state", classes="switch-state"),
+            classes="switch-field",
+        )
+
+    def _switch_value(self, switch_id: str) -> bool:
+        return self.query_one(f"#{switch_id}", Switch).value
+
+    @staticmethod
+    def _state_text(value: bool) -> str:
+        return "Вкл" if value else "Выкл"
+
+    @staticmethod
+    def _split_list(text: str) -> list[str]:
+        if not text:
+            return []
+        return [item.strip() for item in text.split(",") if item.strip()]
+
+    @staticmethod
+    def _parse_int(value: str, *, fallback: int) -> int:
+        try:
+            return int(value)
+        except ValueError:
+            return fallback
+
+
+__all__ = ["SettingsScreen"]
+
+
+--- src/proxtract/tui/screens/summary_screen.py ---
+"""Modal summary screen shown after the extraction flow completes."""
+
+from __future__ import annotations
+
+import os
+import subprocess
+import sys
+from pathlib import Path
+
+from textual.app import ComposeResult
+from textual.containers import Horizontal, Vertical
+from textual.screen import ModalScreen
+from textual.widgets import Button, Label, Static
+
+from ...core import ExtractionStats
+from .. import STYLES_PATH
+
+
+class SummaryScreen(ModalScreen[None]):
+    """Present extraction results with actionable follow-up controls."""
+
+    CSS_PATH = STYLES_PATH
+
+    def __init__(self, stats: ExtractionStats) -> None:
+        super().__init__(id="summary-screen")
+        self._stats = stats
+
+    def compose(self) -> ComposeResult:
+        processed = self._stats.processed_files
+        total_size = self._format_size(self._stats.total_bytes)
+        token_label = (
+            f"{self._stats.token_count:,} ({self._stats.token_model})"
+            if self._stats.token_count is not None
+            else "н/д"
+        )
+
+        skipped_total = sum(self._stats.skipped.values())
+        skipped_body = self._build_skipped_summary()
+        warnings_body = self._build_warnings()
+
+        yield Vertical(
+            Vertical(
+                Label("Извлечение завершено", id="summary-title"),
+                Label(f"Результат сохранён в {self._stats.output}", id="summary-path"),
+                id="summary-modal-header",
+            ),
+            Horizontal(
+                self._metric("Обработано файлов", f"{processed}"),
+                self._metric("Общий размер", total_size),
+                self._metric("Токены", token_label),
+                id="summary-metrics",
+            ),
+            Vertical(
+                Label(f"Пропущено файлов ({skipped_total})", classes="group-title"),
+                skipped_body,
+                classes="summary-block",
+            ),
+            Vertical(
+                Label("Предупреждения", classes="group-title"),
+                warnings_body,
+                classes="summary-block",
+            ),
+            Horizontal(
+                Button("Копировать в буфер", id="copy-output", variant="primary"),
+                Button("Открыть файл", id="open-output"),
+                Button("Закрыть", id="close-summary"),
+                id="summary-buttons",
+            ),
+            classes="modal-card modal-large summary-modal",
+        )
+
+    def on_button_pressed(self, event: Button.Pressed) -> None:
+        if event.button.id == "copy-output":
+            self._copy_output()
+        elif event.button.id == "open-output":
+            self._open_output()
+        elif event.button.id == "close-summary":
+            self.dismiss(None)
+
+    def _copy_output(self) -> None:
+        try:
+            import pyperclip  # type: ignore
+        except Exception:
+            self.app.notify("pyperclip не установлен.", severity="warning")
+            return
+
+        try:
+            contents = Path(self._stats.output).read_text(encoding="utf-8")
+        except Exception as exc:
+            self.app.notify(f"Не удалось прочитать файл: {exc}", severity="error")
+            return
+
+        try:
+            pyperclip.copy(contents)
+        except Exception as exc:  # pragma: no cover - environment specific
+            self.app.notify(f"Буфер обмена недоступен: {exc}", severity="warning")
+        else:
+            self.app.notify("Содержимое скопировано в буфер обмена.", severity="information")
+
+    def _open_output(self) -> None:
+        path = Path(self._stats.output)
+        if not path.exists():
+            self.app.notify("Файл ещё не создан.", severity="warning")
+            return
+
+        try:
+            if sys.platform.startswith("darwin"):
+                subprocess.Popen(["open", str(path)])
+            elif sys.platform.startswith("win"):
+                os.startfile(str(path))  # type: ignore[attr-defined]
+            else:
+                subprocess.Popen(["xdg-open", str(path)])
+        except Exception as exc:  # pragma: no cover - environment dependent
+            self.app.notify(f"Не удалось открыть файл: {exc}", severity="warning")
+        else:
+            self.app.notify("Открытие файла запущено.", severity="information")
+
+    def _metric(self, label: str, value: str) -> Vertical:
+        return Vertical(
+            Label(label, classes="metric-label"),
+            Label(value, classes="metric-value"),
+            classes="metric-card",
+        )
+
+    def _build_skipped_summary(self) -> Vertical:
+        if not self._stats.skipped:
+            return Vertical(Static("Все файлы обработаны.", classes="summary-empty"))
+
+        rows = [
+            Label(f"{reason}: {count}", classes="summary-row")
+            for reason, count in sorted(self._stats.skipped.items(), key=lambda item: item[0])
+        ]
+        return Vertical(*rows, classes="summary-list")
+
+    def _build_warnings(self) -> Vertical:
+        if not self._stats.errors:
+            return Vertical(Static("Предупреждений нет.", classes="summary-empty"))
+
+        rows = [Label(f"• {message}", classes="summary-row") for message in self._stats.errors]
+        return Vertical(*rows, classes="summary-list")
+
+    @staticmethod
+    def _format_size(total_bytes: int) -> str:
+        if total_bytes <= 0:
+            return "0 КБ"
+        kb = total_bytes / 1024
+        if kb < 1024:
+            return f"{kb:.1f} КБ"
+        mb = kb / 1024
+        return f"{mb:.2f} МБ"
+
+
+__all__ = ["SummaryScreen"]
+
+
+--- src/proxtract/tui/styles.tcss ---
+/* Global theming */
+Screen {
+    background: #1E1E2E;
+    color: #CDD6F4;
+}
+
+Screen#main {
+    layout: vertical;
+    padding: 1 3;
+}
+
+Header, Footer {
+    background: #313244;
+    color: #CDD6F4;
+    border: none;
+}
+
+Header {
+    border-bottom: tall #89B4FA 40%;
+}
+
+Footer {
+    border-top: tall #89B4FA 40%;
+}
+
+#main-body {
+    layout: vertical;
+}
+
+.panel-card {
+    background: #313244;
+    border: round #89B4FA 40%;
+    padding: 2;
+    width: 100%;
+}
+
+#title {
+    text-style: bold;
+    color: #89B4FA;
+}
+
+#subtitle {
+    color: #CDD6F4 70%;
+}
+
+#extractor-form {
+    layout: vertical;
+}
+
+.form-field {
+    layout: vertical;
+}
+
+.form-label {
+    text-style: bold;
+    color: #FAB387;
+}
+
+.form-input {
+    width: 100%;
+    border: round #45475A;
+    background: #1E1E2E;
+    padding: 0 1;
+}
+
+#form-actions {
+    layout: horizontal;
+    margin-top: 1;
+}
+
+#form-actions Button {
+    min-width: 16;
+    background: #89B4FA;
+    color: #1E1E2E;
+    border: none;
+}
+
+#form-actions Button:focus {
+    background: #89B4FA 80%;
+}
+
+#extract-progress {
+    margin-top: 1;
+    height: 1;
+    border: round #45475A;
+}
+
+#extract-status {
+    color: #CDD6F4 80%;
+}
+
+#summary-section {
+    border: round #45475A;
+    background: #1E1E2E;
+    padding: 1;
+}
+
+#summary-header {
+    text-style: bold;
+    color: #FAB387;
+}
+
+SummaryDisplay {
+    width: 100%;
+}
+
+/* Modal scaffolding */
+.modal-card {
+    background: #313244;
+    border: round #89B4FA 40%;
+    padding: 2;
+    width: 70;
+    max-width: 100%;
+}
+
+.modal-large {
+    width: 82;
+}
+
+#settings-header,
+#summary-header {
+    layout: vertical;
+}
+
+.group-title {
+    text-style: bold;
+    color: #FAB387;
+    margin-top: 1;
+}
+
+.settings-group,
+.summary-block {
+    border: round #45475A;
+    background: #1E1E2E;
+    padding: 1;
+}
+
+.switch-field {
+    layout: horizontal;
+    align: left middle;
+}
+
+.switch-label {
+    color: #CDD6F4;
+}
+
+.switch-state {
+    color: #89B4FA;
+    text-style: bold;
+    margin-left: 1;
+}
+
+#settings-buttons,
+#summary-buttons {
+    layout: horizontal;
+    align-horizontal: right;
+    margin-top: 1;
+}
+
+#summary-metrics {
+    layout: horizontal;
+}
+
+.metric-card {
+    border: round #45475A;
+    background: #1E1E2E;
+    padding: 1;
+    width: 1fr;
+}
+
+.metric-label {
+    color: #CDD6F4 70%;
+}
+
+.metric-value {
+    text-style: bold;
+    color: #89B4FA;
+}
+
+.summary-row {
+    color: #CDD6F4;
+}
+
+.summary-empty {
+    color: #CDD6F4 70%;
+}
+
+/* Responsive tweaks */
+Screen.bp-narrow {
+    padding: 1;
+}
+
+Screen.bp-compact,
+Screen.bp-tiny {
+    padding: 0 1;
+}
+
+Screen.bp-compact #form-actions,
+Screen.bp-tiny #form-actions {
+    layout: vertical;
+}
+
+Screen.bp-compact .modal-card,
+Screen.bp-tiny .modal-card {
+    width: 95%;
+    padding: 1;
+}
+
+Screen.bp-tiny #title {
+    text-align: center;
+}
+
+Screen.bp-tiny #summary-metrics {
+    layout: vertical;
+}
+
+
+--- src/proxtract/tui/widgets/__init__.py ---
+"""Reusable Textual widgets for the Proxtract TUI."""
+
+from .completion_input import CompletionInput
+from .summary_display import SummaryDisplay
+
+__all__ = [
+    "CompletionInput",
+    "SummaryDisplay",
+]
+
+
+--- src/proxtract/tui/widgets/completion_input.py ---
+"""Input widget that supports basic tab completion for paths and known values."""
+
+from __future__ import annotations
+
+import os
+from pathlib import Path
+from typing import Iterable, List, Sequence
+
+from textual import events
+from textual.widgets import Input
+
+
+class CompletionInput(Input):
+    """Input widget with lightweight tab-completion support."""
+
+    def __init__(
+        self,
+        value: str | None = None,
+        *,
+        mode: str = "text",
+        suggestions: Iterable[str] | None = None,
+        **kwargs,
+    ) -> None:
+        super().__init__(value=value, **kwargs)
+        if mode not in {"text", "path", "list"}:
+            raise ValueError(f"Unsupported completion mode: {mode}")
+
+        self.mode = mode
+        self._static_suggestions: List[str] = list(suggestions or [])
+        self._cycle_values: List[str] = []
+        self._cycle_index: int = -1
+        self._cycle_seed: str = ""
+
+    def set_suggestions(self, suggestions: Sequence[str]) -> None:
+        """Update the static suggestion list used for completions."""
+
+        self._static_suggestions = list(suggestions)
+        self._reset_cycle()
+
+    def on_event(self, event: events.Event):
+        if isinstance(event, events.Key):
+            key = event.key
+            if key in {"tab", "shift+tab"}:
+                event.prevent_default()
+                event.stop()
+                self._handle_completion(forward=(key == "tab"))
+                return super().on_event(event)
+
+            self._reset_cycle()
+
+        return super().on_event(event)
+
+    def _handle_completion(self, *, forward: bool) -> None:
+        seed = self.value or ""
+
+        if self._cycle_values and seed.startswith(self._cycle_seed):
+            self._cycle_index = (self._cycle_index + (1 if forward else -1)) % len(self._cycle_values)
+            self._apply_completion(self._cycle_values[self._cycle_index])
+            return
+
+        matches = self._gather_completions(seed)
+        if not matches:
+            self.app.bell()
+            self._reset_cycle()
+            return
+
+        self._cycle_seed = seed
+        self._cycle_values = matches
+        self._cycle_index = 0 if forward else len(matches) - 1
+        self._apply_completion(self._cycle_values[self._cycle_index])
+
+        if len(matches) > 1:
+            preview = ", ".join(matches[:5])
+            try:
+                self.app.notify(f"Suggestions: {preview}", severity="information")
+            except Exception:
+                pass
+
+    def _gather_completions(self, seed: str) -> List[str]:
+        if self.mode == "path":
+            return self._path_completions(seed)
+
+        if self.mode == "list":
+            prefix, fragment = self._split_list_seed(seed)
+            matches = self._match_static(fragment)
+            return [f"{prefix}{match}" for match in matches]
+
+        if not self._static_suggestions:
+            return []
+
+        return self._match_static(seed)
+
+    def _path_completions(self, seed: str) -> List[str]:
+        seed = seed or ""
+        expanded = os.path.expanduser(seed)
+
+        if seed.endswith(os.sep):
+            base_dir = Path(expanded or ".")
+            prefix = ""
+        else:
+            candidate = Path(expanded or ".")
+            if candidate.is_dir():
+                base_dir = candidate
+                prefix = ""
+            else:
+                base_dir = candidate.parent
+                prefix = candidate.name
+
+        if not str(base_dir):
+            base_dir = Path(".")
+
+        if not base_dir.exists():
+            return []
+
+        try:
+            entries = sorted(base_dir.iterdir(), key=lambda path: (not path.is_dir(), path.name.lower()))
+        except Exception:
+            return []
+
+        if prefix:
+            root_text = seed[: len(seed) - len(prefix)]
+        else:
+            root_text = seed
+            if root_text and not root_text.endswith(os.sep):
+                root_text = f"{root_text}{os.sep}"
+
+        completions: List[str] = []
+        for entry in entries:
+            name = entry.name
+            if prefix and not name.startswith(prefix):
+                continue
+            suggestion = f"{root_text}{name}"
+            if entry.is_dir():
+                suggestion = f"{suggestion}{os.sep}"
+            completions.append(suggestion)
+        return completions
+
+    def _split_list_seed(self, seed: str) -> tuple[str, str]:
+        text = seed or ""
+        if "," not in text:
+            leading_ws = len(text) - len(text.lstrip())
+            prefix = text[:leading_ws]
+            fragment = text[leading_ws:]
+            return prefix, fragment
+
+        index = text.rfind(",")
+        prefix = text[: index + 1]
+        after_sep = text[index + 1 :]
+        whitespace_len = len(after_sep) - len(after_sep.lstrip())
+        prefix += after_sep[:whitespace_len]
+        fragment = after_sep[whitespace_len:]
+        return prefix, fragment
+
+    def _match_static(self, seed: str) -> List[str]:
+        if not self._static_suggestions:
+            return []
+
+        lowered = seed.lower()
+        candidates = [item for item in self._static_suggestions if item.lower().startswith(lowered)]
+        if not candidates and lowered:
+            candidates = [item for item in self._static_suggestions if lowered in item.lower()]
+        ordered_unique: dict[str, None] = {}
+        for item in candidates:
+            if item not in ordered_unique:
+                ordered_unique[item] = None
+        return list(ordered_unique.keys())
+
+    def _apply_completion(self, value: str) -> None:
+        self.value = value
+        self.action_end()
+
+    def _reset_cycle(self) -> None:
+        self._cycle_seed = ""
+        self._cycle_values = []
+        self._cycle_index = -1
+
+
+__all__ = ["CompletionInput"]
+
+
+--- src/proxtract/tui/widgets/summary_display.py ---
+"""Widget for presenting ``ExtractionStats`` summaries."""
+
+from __future__ import annotations
+
+from typing import Optional
+
+from rich.table import Table
+from textual.widgets import Static
+
+from ...core import ExtractionStats
+
+
+class SummaryDisplay(Static):
+    """Render extraction statistics in a compact table."""
+
+    DEFAULT_CSS = """
+    SummaryDisplay {
+        border: round $accent;
+        padding: 1 2;
+        height: auto;
+    }
+    """
+
+    def __init__(self) -> None:
+        super().__init__(id="summary")
+        self._stats: Optional[ExtractionStats] = None
+
+    def update_stats(self, stats: ExtractionStats) -> None:
+        """Store and render a new ``ExtractionStats`` payload."""
+
+        self._stats = stats
+        self.refresh()
+
+    def clear_stats(self) -> None:
+        """Remove any previously rendered stats."""
+
+        self._stats = None
+        self.refresh()
+
+    def render(self) -> Table | str:
+        if self._stats is None:
+            return "No extraction has been run yet."
+
+        stats = self._stats
+        table = Table.grid(padding=(0, 1))
+        table.add_column(justify="right", style="bold")
+        table.add_column()
+        table.add_row("Root", str(stats.root))
+        table.add_row("Output", str(stats.output))
+        table.add_row("Files", str(stats.processed_files))
+        table.add_row("Bytes", str(stats.total_bytes))
+        if stats.token_count is not None:
+            table.add_row("Tokens", f"{stats.token_count} ({stats.token_model})")
+        skipped_summary = ", ".join(f"{reason}: {count}" for reason, count in stats.skipped.items() if count)
+        if skipped_summary:
+            table.add_row("Skipped", skipped_summary)
+        if stats.errors:
+            table.add_row("Warnings", " | ".join(stats.errors))
+        return table
+
+
+--- src/proxtract/utils.py ---
+"""Shared utility helpers for Proxtract."""
+
+from __future__ import annotations
+
+from typing import Any
+
+_TRUE_WORDS = {"1", "true", "yes", "on", "y", "t"}
+_FALSE_WORDS = {"0", "false", "no", "off", "n", "f"}
+
+
+def normalize_bool(value: Any, default: bool) -> bool:
+    """Return a normalized boolean value from arbitrary input.
+
+    Args:
+        value: Incoming configuration value (string, number, bool, etc.).
+        default: Fallback value when ``value`` cannot be interpreted.
+
+    Returns:
+        ``True`` or ``False`` based on ``value`` or ``default`` if parsing fails.
+    """
+
+    if isinstance(value, bool):
+        return value
+
+    if isinstance(value, (int, float)):
+        if value == 0:
+            return False
+        if value == 1:
+            return True
+        return bool(value)
+
+    if isinstance(value, str):
+        normalized = value.strip().lower()
+        if normalized in _TRUE_WORDS:
+            return True
+        if normalized in _FALSE_WORDS:
+            return False
+
+    return default
+
+
+__all__ = ["normalize_bool"]
+
+
+--- tests/conftest.py ---
+import sys
+from pathlib import Path
+import tempfile
+import pytest
+from typing import Iterator, Dict, Any, List
+from unittest.mock import patch
+
+ROOT = Path(__file__).resolve().parent.parent
+SRC = ROOT / "src"
+if str(SRC) not in sys.path:
+    sys.path.insert(0, str(SRC))
+
+from proxtract.core import FileExtractor
+from proxtract.state import AppState
+
+
+@pytest.fixture
+def temp_dir() -> Iterator[Path]:
+    """Create a temporary directory for tests."""
+    with tempfile.TemporaryDirectory() as tmpdir:
+        yield Path(tmpdir)
+
+
+@pytest.fixture
+def sample_text_files(temp_dir: Path) -> Path:
+    """Create a directory with sample text files for testing."""
+    sample_dir = temp_dir / "samples"
+    sample_dir.mkdir()
+    
+    # Create various text files
+    (sample_dir / "python.py").write_text("print('hello world')", encoding="utf-8")
+    (sample_dir / "javascript.js").write_text("console.log('hello');", encoding="utf-8")
+    (sample_dir / "markdown.md").write_text("# Hello World\n\nThis is a test.", encoding="utf-8")
+    (sample_dir / "text.txt").write_text("Just plain text content.", encoding="utf-8")
+    (sample_dir / "empty.txt").write_text("", encoding="utf-8")
+    (sample_dir / "unicode.txt").write_text("Hello 世界! Café résumé naïve.", encoding="utf-8")
+    
+    return sample_dir
+
+
+@pytest.fixture
+def binary_files(temp_dir: Path) -> Path:
+    """Create a directory with binary files for testing."""
+    binary_dir = temp_dir / "binary"
+    binary_dir.mkdir()
+    
+    # Create various binary files using magic bytes
+    # PNG file
+    png_file = binary_dir / "image.png"
+    png_content = b'\x89PNG\r\n\x1a\n' + b'PNG image data' * 10
+    png_file.write_bytes(png_content)
+    
+    # PDF file
+    pdf_file = binary_dir / "document.pdf"
+    pdf_content = b'%PDF-1.4\n' + b'PDF document content' * 10
+    pdf_file.write_bytes(pdf_content)
+    
+    # ZIP file
+    zip_file = binary_dir / "archive.zip"
+    zip_content = b'PK\x03\x04' + b'ZIP archive data' * 10
+    zip_file.write_bytes(zip_content)
+    
+    # File with high null byte ratio
+    null_file = binary_dir / "nulls.bin"
+    null_content = b'\x00' * 50 + b'text' + b'\x00' * 50
+    null_file.write_bytes(null_content)
+    
+    # JPEG file
+    jpg_file = binary_dir / "photo.jpg"
+    jpg_content = b'\xff\xd8\xff\xe0' + b'JPEG image data' * 10
+    jpg_file.write_bytes(jpg_content)
+    
+    return binary_dir
+
+
+@pytest.fixture
+def mixed_files(temp_dir: Path) -> Path:
+    """Create a directory with a mix of text and binary files."""
+    mixed_dir = temp_dir / "mixed"
+    mixed_dir.mkdir()
+    
+    # Text files
+    (mixed_dir / "readme.md").write_text("# Project README\n\nWelcome!", encoding="utf-8")
+    (mixed_dir / "main.py").write_text("def main():\n    print('Hello')\n", encoding="utf-8")
+    (mixed_dir / "config.json").write_text('{"key": "value"}', encoding="utf-8")
+    
+    # Binary files
+    (mixed_dir / "logo.png").write_bytes(b'\x89PNG\r\n\x1a\n' + b'logo data')
+    (mixed_dir / "manual.pdf").write_bytes(b'%PDF-1.4\n' + b'pdf data')
+    
+    # Files that should be filtered by name/pattern
+    (mixed_dir / "package.json").write_text('{"name": "test"}', encoding="utf-8")
+    (mixed_dir / "requirements.txt").write_text("requests>=2.0.0", encoding="utf-8")
+    (mixed_dir / "__pycache__").mkdir()
+    (mixed_dir / "__pycache__" / "module.pyc").write_bytes(b'python bytecode')
+    
+    return mixed_dir
+
+
+@pytest.fixture
+def large_files(temp_dir: Path) -> Path:
+    """Create files of various sizes for testing."""
+    large_dir = temp_dir / "large"
+    large_dir.mkdir()
+    
+    # Small file (under 1KB limit)
+    small_file = large_dir / "small.txt"
+    small_file.write_text("Small content", encoding="utf-8")
+    
+    # Medium file (under 5KB limit but over 1KB)
+    medium_file = large_dir / "medium.txt"
+    medium_file.write_text("Medium content. " * 100, encoding="utf-8")  # ~1.7KB
+    
+    # Large file (over 5KB limit)
+    large_file = large_dir / "large.txt"
+    large_file.write_text("Large content. " * 1000, encoding="utf-8")  # ~17KB
+    
+    # Very large file (over 1MB)
+    very_large_file = large_dir / "very_large.txt"
+    very_large_file.write_text("Very large content. " * 10000, encoding="utf-8")  # ~170KB
+    
+    return large_dir
+
+
+@pytest.fixture
+def nested_structure(temp_dir: Path) -> Path:
+    """Create a nested directory structure for testing."""
+    root = temp_dir / "project"
+    root.mkdir()
+    
+    # Create nested structure
+    (root / "src").mkdir()
+    (root / "src" / "main.py").write_text("def main(): pass", encoding="utf-8")
+    (root / "src" / "utils.py").write_text("def util(): pass", encoding="utf-8")
+    
+    (root / "docs").mkdir()
+    (root / "docs" / "api.md").write_text("# API Documentation", encoding="utf-8")
+    (root / "docs" / "readme.md").write_text("# README", encoding="utf-8")
+    
+    (root / "tests").mkdir()
+    (root / "tests" / "test_main.py").write_text("def test_main(): pass", encoding="utf-8")
+    
+    (root / "config").mkdir()
+    (root / "config" / "settings.toml").write_text('[settings]\ndebug = true', encoding="utf-8")
+    
+    # Files to be filtered
+    (root / "package.json").write_text('{"name": "test"}', encoding="utf-8")
+    (root / ".gitignore").write_text("*.log\nnode_modules/", encoding="utf-8")
+    (root / "__pycache__").mkdir()
+    (root / "__pycache__" / "cache.pyc").write_bytes(b'bytecode')
+    
+    return root
+
+
+@pytest.fixture
+def extractor_default() -> FileExtractor:
+    """Create a FileExtractor with default settings."""
+    return FileExtractor()
+
+
+@pytest.fixture
+def extractor_no_filters() -> FileExtractor:
+    """Create a FileExtractor with all filtering disabled."""
+    return FileExtractor(
+        skip_extensions=set(),
+        skip_patterns=set(),
+        skip_files=set(),
+        skip_empty=False,
+        max_file_size_kb=10000,  # Very large limit
+    )
+
+
+@pytest.fixture
+def extractor_strict_filters() -> FileExtractor:
+    """Create a FileExtractor with strict filtering."""
+    return FileExtractor(
+        skip_extensions={".txt", ".md", ".json"},
+        skip_patterns={"src", "tests"},
+        skip_files={"config.json"},
+        skip_empty=True,
+        max_file_size_kb=1,  # Very small limit
+    )
+
+
+@pytest.fixture
+def app_state_default() -> AppState:
+    """Create an AppState with default settings."""
+    return AppState()
+
+
+@pytest.fixture
+def app_state_custom() -> AppState:
+    """Create an AppState with custom settings."""
+    state = AppState()
+    state.output_path = Path("test_output.txt")
+    state.max_size_kb = 1000
+    state.compact_mode = False
+    state.skip_empty = False
+    state.use_gitignore = False
+    state.include_patterns = ["*.py", "src/*"]
+    state.exclude_patterns = ["*.log", "test_*"]
+    state.skip_extensions = {".pdf", ".png"}
+    state.skip_patterns = {"__pycache__", ".git"}
+    state.skip_files = {"package.json", "requirements.txt"}
+    state.tokenizer_model = "gpt-3.5-turbo"
+    state.enable_token_count = False
+    state.copy_to_clipboard = True
+    return state
+
+
+@pytest.fixture
+def mock_config_path(temp_dir: Path) -> Iterator[Path]:
+    """Mock the config path to use a temporary location."""
+    config_path = temp_dir / "settings.toml"
+    with patch('proxtract.config._config_path') as mock_path:
+        mock_path.return_value = config_path
+        yield config_path
+
+
+@pytest.fixture
+def mock_toml_available():
+    """Mock TOML library as available."""
+    class MockTomllib:
+        @staticmethod
+        def loads(text):
+            import tomli
+            return tomli.loads(text)
+    
+    class MockTomliW:
+        @staticmethod
+        def dump(data, handle):
+            import tomli_w
+            return tomli_w.dump(data, handle)
+    
+    with patch('proxtract.config._tomllib', MockTomllib):
+        with patch('proxtract.config._tomli_w', MockTomliW):
+            yield
+
+
+@pytest.fixture
+def mock_toml_unavailable():
+    """Mock TOML library as unavailable."""
+    with patch('proxtract.config._tomllib', None):
+        with patch('proxtract.config._tomli_w', None):
+            yield
+
+
+def create_test_file(directory: Path, filename: str, content: str | bytes, is_binary: bool = False) -> Path:
+    """Helper function to create a test file."""
+    file_path = directory / filename
+    if is_binary or isinstance(content, bytes):
+        file_path.write_bytes(content)
+    else:
+        file_path.write_text(content, encoding="utf-8")
+    return file_path
+
+
+def assert_file_processed(stats: 'ExtractionStats', filename: str) -> None:
+    """Assert that a file was processed in extraction stats."""
+    assert filename in stats.processed_paths
+
+
+def assert_file_skipped(stats: 'ExtractionStats', filename: str, reason: str) -> None:
+    """Assert that a file was skipped in extraction stats."""
+    assert filename in stats.skipped_paths[reason]
+
+
+def assert_extraction_success(stats: 'ExtractionStats', expected_files: int = None) -> None:
+    """Assert that extraction was successful."""
+    assert len(stats.errors) == 0, f"Extraction had errors: {stats.errors}"
+    if expected_files is not None:
+        assert stats.processed_files == expected_files
+
+
+def create_gitignore_test_setup(temp_dir: Path) -> Path:
+    """Create a test setup with .gitignore file."""
+    root = temp_dir / "gitignore_test"
+    root.mkdir()
+    
+    # Create .gitignore
+    (root / ".gitignore").write_text(
+        "*.log\n"
+        "__pycache__/\n"
+        "node_modules/\n"
+        "*.tmp\n",
+        encoding="utf-8"
+    )
+    
+    # Create files that should be ignored
+    (root / "debug.log").write_text("Log file", encoding="utf-8")
+    (root / "temp.tmp").write_text("Temporary file", encoding="utf-8")
+    
+    # Create pycache directory
+    cache_dir = root / "__pycache__"
+    cache_dir.mkdir()
+    (cache_dir / "module.pyc").write_bytes(b'bytecode')
+    
+    # Create node_modules directory
+    node_modules = root / "node_modules"
+    node_modules.mkdir()
+    (node_modules / "package.json").write_text('{"name": "dep"}', encoding="utf-8")
+    
+    # Create files that should NOT be ignored
+    (root / "main.py").write_text("print('main')", encoding="utf-8")
+    (root / "README.md").write_text("# Project", encoding="utf-8")
+    
+    return root
+
+
+--- tests/test_config.py ---
+"""Unit tests for configuration loading and saving."""
+
+from __future__ import annotations
+
+import pytest
+import tempfile
+from pathlib import Path
+from unittest.mock import patch, mock_open
+import json
+
+from proxtract.config import load_config, apply_config, save_config, _config_path
+from proxtract.state import AppState
+
+
+class TestConfigPath:
+    """Test config path generation."""
+
+    def test_config_path_default(self):
+        """Test default config path generation."""
+        config_path = _config_path()
+        assert config_path.name == "settings.toml"
+        assert "proxtract" in str(config_path)
+        assert config_path.expanduser().exists() or str(config_path).startswith("~/")
+
+
+class TestLoadConfig:
+    """Test configuration loading."""
+
+    def test_load_config_empty_when_file_not_exists(self):
+        """Test loading config when file doesn't exist."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            with patch('proxtract.config._config_path') as mock_path:
+                mock_path.return_value = Path(tmpdir) / "nonexistent.toml"
+                
+                config = load_config()
+                assert config == {}
+
+    def test_load_config_empty_when_toml_not_available(self):
+        """Test loading config when TOML library is not available."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            config_file = Path(tmpdir) / "settings.toml"
+            config_file.write_text('key = "value"', encoding="utf-8")
+            
+            with patch('proxtract.config._tomllib', None):
+                config = load_config()
+                assert config == {}
+
+    def test_load_config_invalid_toml(self):
+        """Test loading config with invalid TOML content."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            config_file = Path(tmpdir) / "settings.toml"
+            config_file.write_text('invalid toml content [}', encoding="utf-8")
+            
+            with patch('proxtract.config._config_path') as mock_path:
+                mock_path.return_value = config_file
+                
+                config = load_config()
+                assert config == {}
+
+    def test_load_config_valid_toml(self):
+        """Test loading config with valid TOML content."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            config_file = Path(tmpdir) / "settings.toml"
+            toml_content = '''
+output_path = "test.txt"
+max_size_kb = 1000
+compact_mode = false
+skip_empty = false
+use_gitignore = false
+include_patterns = ["*.py", "src/*"]
+exclude_patterns = ["*.log", "test_*"]
+skip_extensions = [".pdf", ".png"]
+skip_patterns = ["__pycache__", ".git"]
+skip_files = ["package.json", "requirements.txt"]
+tokenizer_model = "gpt-3.5-turbo"
+enable_token_count = false
+copy_to_clipboard = true
+force_include = true
+'''
+            config_file.write_text(toml_content, encoding="utf-8")
+            
+            with patch('proxtract.config._config_path') as mock_path:
+                mock_path.return_value = config_file
+                
+                config = load_config()
+                
+                assert config["output_path"] == "test.txt"
+                assert config["max_size_kb"] == 1000
+                assert config["compact_mode"] is False
+                assert config["skip_empty"] is False
+                assert config["use_gitignore"] is False
+                assert config["include_patterns"] == ["*.py", "src/*"]
+                assert config["exclude_patterns"] == ["*.log", "test_*"]
+                assert config["skip_extensions"] == [".pdf", ".png"]
+                assert config["skip_patterns"] == ["__pycache__", ".git"]
+                assert config["skip_files"] == ["package.json", "requirements.txt"]
+                assert config["tokenizer_model"] == "gpt-3.5-turbo"
+                assert config["enable_token_count"] is False
+                assert config["copy_to_clipboard"] is True
+                assert config["force_include"] is True
+
+    def test_load_config_partial_config(self):
+        """Test loading config with only some settings."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            config_file = Path(tmpdir) / "settings.toml"
+            toml_content = '''
+output_path = "custom.txt"
+max_size_kb = 2000
+compact_mode = true
+'''
+            config_file.write_text(toml_content, encoding="utf-8")
+            
+            with patch('proxtract.config._config_path') as mock_path:
+                mock_path.return_value = config_file
+                
+                config = load_config()
+                
+                assert config["output_path"] == "custom.txt"
+                assert config["max_size_kb"] == 2000
+                assert config["compact_mode"] is True
+                # Other settings should not be present
+                assert "skip_empty" not in config
+
+
+class TestApplyConfig:
+    """Test configuration application to AppState."""
+
+    def test_apply_config_empty_data(self):
+        """Test applying empty config data."""
+        state = AppState()
+        original_output = state.output_path
+        original_max_size = state.max_size_kb
+        
+        result = apply_config(state, {})
+        
+        assert result is state
+        assert state.output_path == original_output
+        assert state.max_size_kb == original_max_size
+
+    def test_apply_config_basic_settings(self):
+        """Test applying basic configuration settings."""
+        state = AppState()
+        
+        config_data = {
+            "output_path": "custom_output.txt",
+            "max_size_kb": 1500,
+            "compact_mode": False,
+            "skip_empty": False,
+            "use_gitignore": False,
+            "force_include": True,
+        }
+        
+        result = apply_config(state, config_data)
+        
+        assert result is state
+        assert state.output_path == Path("custom_output.txt").expanduser()
+        assert state.max_size_kb == 1500
+        assert state.compact_mode is False
+        assert state.skip_empty is False
+        assert state.use_gitignore is False
+        assert state.force_include is True
+
+    def test_apply_config_boolean_strings(self):
+        """Test applying boolean settings from string values."""
+        state = AppState()
+
+        config_data = {
+            "compact_mode": "false",
+            "skip_empty": "no",
+            "use_gitignore": "0",
+            "enable_token_count": "False",
+            "copy_to_clipboard": "yes",
+            "force_include": "1",
+        }
+
+        apply_config(state, config_data)
+
+        assert state.compact_mode is False
+        assert state.skip_empty is False
+        assert state.use_gitignore is False
+        assert state.enable_token_count is False
+        assert state.copy_to_clipboard is True
+        assert state.force_include is True
+
+    def test_apply_config_include_patterns(self):
+        """Test applying include patterns configuration."""
+        state = AppState()
+        
+        config_data = {
+            "include_patterns": ["*.py", "src/*", "docs/*.md"],
+            "exclude_patterns": ["*.log", "test_*", "node_modules/*"],
+        }
+        
+        apply_config(state, config_data)
+        
+        assert state.include_patterns == ["*.py", "src/*", "docs/*.md"]
+        assert state.exclude_patterns == ["*.log", "test_*", "node_modules/*"]
+
+    def test_apply_config_filtering_rules(self):
+        """Test applying filtering rules configuration."""
+        state = AppState()
+        
+        config_data = {
+            "skip_extensions": [".pdf", ".png", ".jpg"],
+            "skip_patterns": ["__pycache__", ".git", "test_*"],
+            "skip_files": ["package.json", "requirements.txt", "Dockerfile"],
+        }
+        
+        apply_config(state, config_data)
+        
+        assert state.skip_extensions == {".pdf", ".png", ".jpg"}
+        assert state.skip_patterns == {"__pycache__", ".git", "test_*"}
+        assert state.skip_files == {"package.json", "requirements.txt", "Dockerfile"}
+
+    def test_apply_config_disable_filters(self):
+        """Empty collections should disable custom filters."""
+        state = AppState()
+
+        config_data = {
+            "skip_extensions": [],
+            "skip_patterns": [],
+            "skip_files": [],
+        }
+
+        apply_config(state, config_data)
+
+        assert state.skip_extensions == set()
+        assert state.skip_patterns == set()
+        assert state.skip_files == set()
+
+    def test_apply_config_tokenizer_settings(self):
+        """Test applying tokenizer configuration."""
+        state = AppState()
+        
+        config_data = {
+            "tokenizer_model": "gpt-3.5-turbo",
+            "enable_token_count": False,
+            "copy_to_clipboard": True,
+        }
+        
+        apply_config(state, config_data)
+        
+        assert state.tokenizer_model == "gpt-3.5-turbo"
+        assert state.enable_token_count is False
+        assert state.copy_to_clipboard is True
+
+    def test_apply_config_path_expansion(self):
+        """Test that output paths are properly expanded."""
+        state = AppState()
+        
+        config_data = {
+            "output_path": "~/documents/output.txt",
+        }
+        
+        apply_config(state, config_data)
+        
+        # Should expand user home directory
+        assert str(state.output_path).startswith(str(Path.home()))
+
+    def test_apply_config_invalid_data_types(self):
+        """Test handling of invalid data types in config."""
+        state = AppState()
+        
+        config_data = {
+            "max_size_kb": "invalid",  # Should be int
+            "compact_mode": "not_bool",  # Should be bool
+            "include_patterns": "not_list",  # Should be list
+        }
+        
+        # Should handle gracefully without crashing
+        apply_config(state, config_data)
+        
+        # Invalid values should fall back to defaults
+        assert state.max_size_kb == 500  # Default
+        assert state.compact_mode is True  # Default
+        assert state.include_patterns == []  # Default
+
+
+class TestSaveConfig:
+    """Test configuration saving."""
+
+    def test_save_config_create_directory(self):
+        """Test that save_config creates necessary directories."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            config_path = Path(tmpdir) / "nested" / "config" / "settings.toml"
+            
+            state = AppState()
+            state.output_path = "test.txt"
+            state.max_size_kb = 1000
+            
+            with patch('proxtract.config._config_path') as mock_path:
+                mock_path.return_value = config_path
+                
+                save_config(state)
+                
+                assert config_path.parent.exists()
+
+    def test_save_config_with_tomli_w(self):
+        """Test saving config with tomli_w library."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            config_path = Path(tmpdir) / "settings.toml"
+            
+            state = AppState()
+            state.output_path = "test.txt"
+            state.max_size_kb = 1000
+            state.compact_mode = False
+            state.skip_extensions = {".pdf", ".png"}
+            state.skip_patterns = {"__pycache__"}
+            state.skip_files = {"package.json"}
+            state.force_include = True
+            
+            with patch('proxtract.config._config_path') as mock_path:
+                mock_path.return_value = config_path
+                # Mock tomli_w being available
+                with patch('proxtract.config._tomli_w') as mock_tomli_w:
+                    mock_tomli_w.dump = lambda data, handle: handle.write(b"mocked toml")
+                    
+                    save_config(state)
+                    
+                    # Should have created the file
+                    assert config_path.exists()
+
+    def test_save_config_fallback_manual(self):
+        """Test saving config with manual construction fallback."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            config_path = Path(tmpdir) / "settings.toml"
+            
+            state = AppState()
+            state.output_path = "test.txt"
+            state.max_size_kb = 1000
+            state.compact_mode = False
+            state.skip_empty = True
+            state.use_gitignore = True
+            state.include_patterns = ["*.py"]
+            state.exclude_patterns = ["*.log"]
+            state.skip_extensions = {".pdf"}
+            state.skip_patterns = {"__pycache__"}
+            state.skip_files = {"package.json"}
+            state.tokenizer_model = "gpt-4"
+            state.enable_token_count = True
+            state.copy_to_clipboard = False
+            state.force_include = True
+            
+            with patch('proxtract.config._config_path') as mock_path:
+                mock_path.return_value = config_path
+                # Mock tomli_w being unavailable
+                with patch('proxtract.config._tomli_w', None):
+                    save_config(state)
+                    
+                    # Should have created the file with manual construction
+                    assert config_path.exists()
+                    content = config_path.read_text(encoding="utf-8")
+                    
+                    # Check that all values are present
+                    assert 'output_path = "test.txt"' in content
+                    assert 'max_size_kb = 1000' in content
+                    assert 'compact_mode = false' in content
+                    assert 'skip_empty = true' in content
+                    assert 'use_gitignore = true' in content
+                    assert 'include_patterns = ["*.py"]' in content
+                    assert 'exclude_patterns = ["*.log"]' in content
+                    assert 'skip_extensions = [".pdf"]' in content
+                    assert 'skip_patterns = ["__pycache__"]' in content
+                    assert 'skip_files = ["package.json"]' in content
+                    assert 'tokenizer_model = "gpt-4"' in content
+                    assert 'enable_token_count = true' in content
+                    assert 'copy_to_clipboard = false' in content
+                    assert 'force_include = true' in content
+
+    def test_save_config_string_escaping(self):
+        """Test proper escaping of strings in manual construction."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            config_path = Path(tmpdir) / "settings.toml"
+            
+            state = AppState()
+            state.output_path = 'test"with"quotes.txt'
+            state.tokenizer_model = 'model\\with\\backslashes'
+            state.include_patterns = ['pattern"with"quotes', 'path\\with\\backslashes']
+            
+            with patch('proxtract.config._config_path') as mock_path:
+                mock_path.return_value = config_path
+                with patch('proxtract.config._tomli_w', None):
+                    save_config(state)
+                    
+                    content = config_path.read_text(encoding="utf-8")
+                    
+                    # Check proper escaping
+                    assert 'test\\"with\\"quotes.txt' in content
+                    assert 'model\\\\with\\\\backslashes' in content
+                    assert 'pattern\\"with\\"quotes' in content
+                    assert 'path\\\\with\\\\backslashes' in content
+
+    def test_save_config_missing_attributes(self):
+        """Test saving config when state doesn't have all attributes."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            config_path = Path(tmpdir) / "settings.toml"
+            
+            # Create a minimal state without filtering attributes
+            class MinimalState:
+                def __init__(self):
+                    self.output_path = Path("test.txt")
+                    self.max_size_kb = 500
+                    self.compact_mode = True
+                    self.skip_empty = True
+                    self.use_gitignore = True
+                    self.force_include = False
+                    self.include_patterns = []
+                    self.exclude_patterns = []
+                    self.tokenizer_model = "gpt-4"
+                    self.enable_token_count = True
+                    self.copy_to_clipboard = False
+            
+            state = MinimalState()
+            
+            with patch('proxtract.config._config_path') as mock_path:
+                mock_path.return_value = config_path
+                with patch('proxtract.config._tomli_w', None):
+                    # Should not crash on missing attributes
+                    save_config(state)
+                    
+                    assert config_path.exists()
+
+    def test_save_config_with_none_values(self):
+        """Test saving config with None values."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            config_path = Path(tmpdir) / "settings.toml"
+            
+            state = AppState()
+            # Set some values to None-like states
+            state.include_patterns = []
+            state.exclude_patterns = []
+            
+            with patch('proxtract.config._config_path') as mock_path:
+                mock_path.return_value = config_path
+                with patch('proxtract.config._tomli_w', None):
+                    save_config(state)
+                    
+                    content = config_path.read_text(encoding="utf-8")
+                    
+                    # Should handle empty lists properly
+                    assert 'include_patterns = []' in content
+                    assert 'exclude_patterns = []' in content
+
+
+class TestConfigRoundTrip:
+    """Test complete config load/save round trip."""
+
+    def test_save_and_load_round_trip(self):
+        """Test saving config and loading it back."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            config_path = Path(tmpdir) / "settings.toml"
+            
+            # Create initial state
+            original_state = AppState()
+            original_state.output_path = Path(tmpdir) / "test_output.txt"
+            original_state.max_size_kb = 1500
+            original_state.compact_mode = False
+            original_state.skip_empty = False
+            original_state.use_gitignore = False
+            original_state.include_patterns = ["*.py", "src/*"]
+            original_state.exclude_patterns = ["*.log", "test_*"]
+            original_state.skip_extensions = {".pdf", ".png"}
+            original_state.skip_patterns = {"__pycache__", ".git"}
+            original_state.skip_files = {"package.json", "requirements.txt"}
+            original_state.tokenizer_model = "gpt-3.5-turbo"
+            original_state.enable_token_count = False
+            original_state.copy_to_clipboard = True
+            original_state.force_include = True
+            original_state.force_include = True
+            
+            with patch('proxtract.config._config_path') as mock_path:
+                mock_path.return_value = config_path
+                
+                # Save config
+                save_config(original_state)
+                
+                # Load config back
+                config_data = load_config()
+                
+                # Create new state and apply loaded config
+                new_state = AppState()
+                apply_config(new_state, config_data)
+                
+                # Verify all values match
+                assert new_state.output_path == original_state.output_path
+                assert new_state.max_size_kb == original_state.max_size_kb
+                assert new_state.compact_mode == original_state.compact_mode
+                assert new_state.skip_empty == original_state.skip_empty
+                assert new_state.use_gitignore == original_state.use_gitignore
+                assert new_state.include_patterns == original_state.include_patterns
+                assert new_state.exclude_patterns == original_state.exclude_patterns
+                assert new_state.skip_extensions == original_state.skip_extensions
+                assert new_state.skip_patterns == original_state.skip_patterns
+                assert new_state.skip_files == original_state.skip_files
+                assert new_state.tokenizer_model == original_state.tokenizer_model
+                assert new_state.enable_token_count == original_state.enable_token_count
+                assert new_state.copy_to_clipboard == original_state.copy_to_clipboard
+                assert new_state.force_include == original_state.force_include
+                assert new_state.force_include == original_state.force_include
+
+
+if __name__ == "__main__":
+    pytest.main([__file__])
+
+
+--- tests/test_core.py ---
+"""Unit tests for core filtering and extraction logic."""
+
+from __future__ import annotations
+
+import pytest
+import tempfile
+from pathlib import Path
+from unittest.mock import patch, MagicMock
+from proxtract.core import FileExtractor, ExtractionStats, ExtractionError
+
+
+class TestFileFiltering:
+    """Test file filtering logic."""
+
+    def test_default_extension_filtering(self):
+        """Test that default extensions are properly filtered."""
+        extractor = FileExtractor()
+        
+        # Test with default extensions
+        assert ".pdf" in extractor.skip_extensions
+        assert ".png" in extractor.skip_extensions
+        assert ".jpg" in extractor.skip_extensions
+        assert ".txt" not in extractor.skip_extensions
+        assert ".py" not in extractor.skip_extensions
+
+    def test_custom_skip_extensions(self):
+        """Test custom extension filtering rules."""
+        extractor = FileExtractor(skip_extensions={".py", ".js"})
+        
+        assert ".py" in extractor.skip_extensions
+        assert ".js" in extractor.skip_extensions
+        assert ".pdf" not in extractor.skip_extensions
+        assert ".png" not in extractor.skip_extensions
+
+    def test_custom_skip_patterns(self):
+        """Test custom pattern filtering rules."""
+        extractor = FileExtractor(skip_patterns={"__pycache__", "test_*"})
+        
+        assert extractor.skip_patterns == {"__pycache__", "test_*"}
+
+    def test_custom_skip_files(self):
+        """Test custom file name filtering rules."""
+        extractor = FileExtractor(skip_files={"package.json", "requirements.txt"})
+        
+        assert "package.json" in extractor.skip_files
+        assert "requirements.txt" in extractor.skip_files
+
+    def test_match_any_function(self):
+        """Test the _match_any function."""
+        patterns = ["*.py", "test_*", "config.*"]
+        
+        # Test matching patterns
+        assert FileExtractor._match_any(patterns, "main.py")
+        assert FileExtractor._match_any(patterns, "test_module.py")
+        assert FileExtractor._match_any(patterns, "config.json")
+        
+        # Test non-matching patterns
+        assert not FileExtractor._match_any(patterns, "app.js")
+        assert not FileExtractor._match_any(patterns, "README.md")
+
+    def test_should_skip_extension_filter(self):
+        """Test file skipping due to extension filtering."""
+        extractor = FileExtractor(skip_extensions={".pdf", ".png"})
+        
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+            extractor._root_path = root
+            
+            pdf_file = root / "document.pdf"
+            pdf_file.write_text("PDF content", encoding="utf-8")
+            
+            should_skip, reason = extractor._should_skip(pdf_file, include_override=False)
+            assert should_skip
+            assert reason == "excluded_ext"
+
+    def test_should_skip_file_name_filter(self):
+        """Test file skipping due to file name filtering."""
+        extractor = FileExtractor(skip_files={"package.json", "requirements.txt"})
+        
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+            extractor._root_path = root
+            
+            pkg_file = root / "package.json"
+            pkg_file.write_text('{"name": "test"}', encoding="utf-8")
+            
+            should_skip, reason = extractor._should_skip(pkg_file, include_override=False)
+            assert should_skip
+            assert reason == "excluded_name"
+
+    def test_should_skip_pattern_filter(self):
+        """Test file skipping due to pattern filtering."""
+        extractor = FileExtractor(skip_patterns={"__pycache__", "test_*"})
+        
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+            extractor._root_path = root
+            
+            # Test __pycache__ directory
+            cache_dir = root / "__pycache__"
+            cache_dir.mkdir()
+            test_file = cache_dir / "module.txt"
+            test_file.write_text("bytecode", encoding="utf-8")
+            
+            should_skip, reason = extractor._should_skip(test_file, include_override=False)
+            assert should_skip
+            assert reason == "excluded_path"
+
+    def test_should_skip_empty_files(self):
+        """Test empty file handling."""
+        extractor = FileExtractor(skip_empty=True)
+        
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+            extractor._root_path = root
+            
+            empty_file = root / "empty.txt"
+            empty_file.write_text("", encoding="utf-8")
+            
+            should_skip, reason = extractor._should_skip(empty_file, include_override=False)
+            assert should_skip
+            assert reason == "empty"
+
+    def test_should_skip_large_files(self):
+        """Test large file handling."""
+        extractor = FileExtractor(max_file_size_kb=1)  # 1KB limit
+        
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+            extractor._root_path = root
+            
+            large_file = root / "large.txt"
+            large_file.write_text("x" * (2 * 1024), encoding="utf-8")  # 2KB
+            
+            should_skip, reason = extractor._should_skip(large_file, include_override=False)
+            assert should_skip
+            assert reason == "too_large"
+
+    def test_include_pattern_override(self):
+        """Test include pattern override functionality."""
+        extractor = FileExtractor(include_patterns=["src/*"])
+        
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+            extractor._root_path = root
+            
+            # Create files
+            src_file = root / "src" / "main.py"
+            src_file.parent.mkdir(parents=True, exist_ok=True)
+            src_file.write_text("print('src')", encoding="utf-8")
+            
+            other_file = root / "other.py"
+            other_file.write_text("print('other')", encoding="utf-8")
+            
+            # With include override, included files should not be filtered
+            should_skip, reason = extractor._should_skip(src_file, include_override=True)
+            assert not should_skip
+            
+            # Without include override, non-included files should be filtered
+            should_skip, reason = extractor._should_skip(other_file, include_override=False)
+            assert should_skip
+            assert reason == "not_included"
+
+    def test_skip_extensions_disabled_with_empty_set(self):
+        """Empty skip_extensions should disable extension filtering."""
+        extractor = FileExtractor(skip_extensions=set())
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+            extractor._root_path = root
+
+            png_file = root / "image.png"
+            png_file.write_text("fake image", encoding="utf-8")
+
+            should_skip, _ = extractor._should_skip(png_file, include_override=False)
+            assert should_skip is False
+
+    def test_force_include_bypasses_excludes(self, tmp_path):
+        """Include patterns should override excludes when force_include is enabled."""
+        root = tmp_path
+        target = root / "secret.env"
+        target.write_text("token", encoding="utf-8")
+        (root / ".gitignore").write_text("*.env\n", encoding="utf-8")
+
+        extractor = FileExtractor(
+            include_patterns=["secret.env"],
+            exclude_patterns=["*.env"],
+            use_gitignore=True,
+            force_include=True,
+        )
+        output = root / "out.txt"
+        stats = extractor.extract(root, output)
+
+        assert "secret.env" in stats.processed_paths
+        assert stats.skipped["gitignore"] == 0
+        assert stats.skipped["excluded_pattern"] == 0
+
+    def test_force_include_respects_excludes_when_disabled(self, tmp_path):
+        """Without force include, exclude/gitignore still win."""
+        root = tmp_path
+        target = root / "secret.env"
+        target.write_text("token", encoding="utf-8")
+        (root / ".gitignore").write_text("*.env\n", encoding="utf-8")
+
+        extractor = FileExtractor(
+            include_patterns=["secret.env"],
+            exclude_patterns=["*.env"],
+            use_gitignore=True,
+            force_include=False,
+        )
+        output = root / "out.txt"
+        stats = extractor.extract(root, output)
+
+        assert "secret.env" not in stats.processed_paths
+        assert stats.skipped["excluded_pattern"] == 1
+        assert stats.skipped["gitignore"] == 0
+
+
+class TestBinaryDetection:
+    """Test binary file detection logic."""
+
+    def test_is_text_file_utf8(self):
+        """Test text file detection with UTF-8 content."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+            text_file = root / "text.txt"
+            text_file.write_text("Hello, world! This is a UTF-8 text file.", encoding="utf-8")
+            
+            assert FileExtractor._is_text_file(text_file)
+
+    def test_is_text_file_empty(self):
+        """Test that empty files are considered text files."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+            empty_file = root / "empty.txt"
+            empty_file.write_text("", encoding="utf-8")
+            
+            assert FileExtractor._is_text_file(empty_file)
+
+    def test_is_text_file_binary_signature(self):
+        """Test binary file detection with magic bytes."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+            
+            # Test PNG file
+            png_file = root / "image.png"
+            png_content = b'\x89PNG\r\n\x1a\n' + b'text content'
+            png_file.write_bytes(png_content)
+            assert not FileExtractor._is_text_file(png_file)
+            
+            # Test PDF file
+            pdf_file = root / "document.pdf"
+            pdf_content = b'%PDF-1.4\n' + b'pdf content'
+            pdf_file.write_bytes(pdf_content)
+            assert not FileExtractor._is_text_file(pdf_file)
+            
+            # Test ZIP file
+            zip_file = root / "archive.zip"
+            zip_content = b'PK\x03\x04' + b'zip content'
+            zip_file.write_bytes(zip_content)
+            assert not FileExtractor._is_text_file(zip_file)
+
+    def test_is_text_file_null_bytes(self):
+        """Test binary file detection with null bytes."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+            
+            # File with high null byte ratio
+            null_file = root / "binary.bin"
+            null_content = b'\x00' * 20 + b'text' + b'\x00' * 20  # > 50% null bytes
+            null_file.write_bytes(null_content)
+            assert not FileExtractor._is_text_file(null_file)
+            
+            # File with low null byte ratio (should be treated as text)
+            text_with_nulls = root / "text_with_nulls.txt"
+            text_content = b'text content\x00with some nulls'
+            text_with_nulls.write_bytes(text_content)
+            assert FileExtractor._is_text_file(text_with_nulls)
+
+    def test_is_text_file_encoding_detection(self):
+        """Test text file detection with different encodings."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+            
+            # Test Latin-1 encoded file
+            latin1_file = root / "latin1.txt"
+            latin1_content = "Café résumé naïve".encode('latin-1')
+            latin1_file.write_bytes(latin1_content)
+            assert FileExtractor._is_text_file(latin1_file)
+            
+            # Test UTF-8 BOM file
+            bom_file = root / "bom.txt"
+            bom_content = b'\xef\xbb\xbf' + b'UTF-8 with BOM'
+            bom_file.write_bytes(bom_content)
+            assert FileExtractor._is_text_file(bom_file)
+
+    def test_is_text_file_control_characters(self):
+        """Test text file detection with high control character ratio."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+            
+            # File with too many control characters
+            control_file = root / "control.txt"
+            control_content = b'text\x01\x02\x03\x04\x05' * 10  # Many control chars
+            control_file.write_bytes(control_content)
+            assert not FileExtractor._is_text_file(control_file)
+
+
+class TestExtractionStats:
+    """Test ExtractionStats class."""
+
+    def test_processed_files_property(self):
+        """Test processed_files property."""
+        stats = ExtractionStats(
+            root=Path("/tmp"),
+            output=Path("/tmp/output.txt"),
+            processed_paths=["file1.txt", "file2.py", "file3.js"],
+            total_bytes=1024,
+            skipped_paths={},
+            errors=[],
+        )
+        
+        assert stats.processed_files == 3
+
+    def test_skipped_property(self):
+        """Test skipped property aggregation."""
+        stats = ExtractionStats(
+            root=Path("/tmp"),
+            output=Path("/tmp/output.txt"),
+            processed_paths=[],
+            total_bytes=0,
+            skipped_paths={
+                "excluded_ext": ["file1.pdf", "file2.png"],
+                "empty": ["file3.txt"],
+                "too_large": ["file4.bin"],
+                "custom_reason": ["file5.custom"],
+            },
+            errors=[],
+        )
+        
+        skipped = stats.skipped
+        assert skipped["excluded_ext"] == 2
+        assert skipped["empty"] == 1
+        assert skipped["too_large"] == 1
+        assert skipped["other"] == 1  # custom_reason should be aggregated to "other"
+
+    def test_as_dict_method(self):
+        """Test as_dict method."""
+        stats = ExtractionStats(
+            root=Path("/tmp"),
+            output=Path("/tmp/output.txt"),
+            processed_paths=["file1.txt"],
+            total_bytes=512,
+            skipped_paths={"excluded_ext": ["file.pdf"]},
+            errors=[],
+            token_count=100,
+            token_model="gpt-4",
+        )
+        
+        result = stats.as_dict()
+        assert isinstance(result, dict)
+        assert result["processed_files"] == 1
+        assert result["total_bytes"] == 512
+        assert result["skipped"]["excluded_ext"] == 1
+        assert result["token_count"] == 100
+
+
+class TestExtractionWorkflow:
+    """Test complete extraction workflow."""
+
+    def test_extract_basic_workflow(self):
+        """Test basic extraction workflow."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+            
+            # Create test files
+            (root / "file1.txt").write_text("Content 1", encoding="utf-8")
+            (root / "file2.py").write_text("print('hello')", encoding="utf-8")
+            
+            output_file = root / "extracted.txt"
+            extractor = FileExtractor()
+            
+            stats = extractor.extract(root, output_file)
+            
+            # Check stats
+            assert stats.processed_files == 2
+            assert stats.total_bytes > 0
+            assert len(stats.skipped) == 0
+            
+            # Check output file
+            content = output_file.read_text(encoding="utf-8")
+            assert "Content 1" in content
+            assert "print('hello')" in content
+
+    def test_extract_with_filtering(self):
+        """Test extraction with various filters."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+            
+            # Create test files with different types
+            (root / "src.py").write_text("print('python')", encoding="utf-8")
+            (root / "image.png").write_text("fake png", encoding="utf-8")
+            (root / "empty.txt").write_text("", encoding="utf-8")
+            
+            output_file = root / "extracted.txt"
+            extractor = FileExtractor(skip_extensions={".png"})
+            
+            stats = extractor.extract(root, output_file)
+            
+            assert stats.processed_files == 1  # Only .py file
+            assert stats.skipped["excluded_ext"] == 1  # .png file
+            assert stats.skipped["empty"] == 1  # empty file
+            
+            content = output_file.read_text(encoding="utf-8")
+            assert "src.py" in content
+            assert "image.png" not in content
+
+    def test_extract_binary_files(self):
+        """Test that binary files are properly detected and skipped."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+            
+            # Create text file
+            text_file = root / "text.txt"
+            text_file.write_text("This is text", encoding="utf-8")
+            
+            # Create binary file
+            binary_file = root / "image.png"
+            binary_file.write_bytes(b'\x89PNG\r\n\x1a\n' + b'binary data')
+            
+            output_file = root / "extracted.txt"
+            extractor = FileExtractor(skip_extensions=set())
+            
+            stats = extractor.extract(root, output_file)
+            
+            assert stats.processed_files == 1  # Only text file
+            assert stats.skipped["binary"] == 1  # Binary file skipped
+            
+            content = output_file.read_text(encoding="utf-8")
+            assert "text.txt" in content
+            assert "image.png" not in content
+
+    def test_extract_gitignore_support(self):
+        """Test .gitignore support (if pathspec is available)."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+            
+            # Create .gitignore file
+            (root / ".gitignore").write_text("*.log\n", encoding="utf-8")
+            
+            # Create test files
+            (root / "main.py").write_text("print('main')", encoding="utf-8")
+            (root / "debug.log").write_text("debug output", encoding="utf-8")
+            
+            output_file = root / "extracted.txt"
+            extractor = FileExtractor(use_gitignore=True)
+            
+            stats = extractor.extract(root, output_file)
+            
+            # Should skip .log file due to gitignore
+            assert stats.processed_files == 1
+            content = output_file.read_text(encoding="utf-8")
+            assert "main.py" in content
+            assert "debug.log" not in content
+
+    def test_extract_include_patterns(self):
+        """Test extraction with include patterns."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+        
+            # Create nested files
+            src_file = root / "src" / "main.py"
+            src_file.parent.mkdir(parents=True, exist_ok=True)
+            src_file.write_text("print('main')", encoding="utf-8")
+
+            docs_file = root / "docs" / "readme.md"
+            docs_file.parent.mkdir(parents=True, exist_ok=True)
+            docs_file.write_text("# README", encoding="utf-8")
+
+            tests_file = root / "tests" / "test.py"
+            tests_file.parent.mkdir(parents=True, exist_ok=True)
+            tests_file.write_text("def test(): pass", encoding="utf-8")
+            
+            output_file = root / "extracted.txt"
+            extractor = FileExtractor(include_patterns=["src/*", "*.md"])
+            
+            stats = extractor.extract(root, output_file)
+            
+            assert stats.processed_files == 2  # src/main.py and docs/readme.md
+            
+            content = output_file.read_text(encoding="utf-8")
+            assert "src/main.py" in content
+            assert "docs/readme.md" in content
+            assert "tests/test.py" not in content
+
+    def test_extract_nonexistent_directory_raises_error(self):
+        """Test that extraction fails on nonexistent directory."""
+        extractor = FileExtractor()
+        
+        with pytest.raises(ExtractionError):
+            extractor.extract("/nonexistent", "/tmp/output.txt")
+
+    def test_extract_file_reading_fallback(self):
+        """Test file reading with encoding fallback."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+            
+            # Create a file with mixed encoding that will fail UTF-8 but succeed with cp1251
+            mixed_file = root / "mixed.txt"
+            mixed_content = "Привет мир".encode('cp1251') + b'\xff'  # Test fallback
+            mixed_file.write_bytes(mixed_content)
+            
+            output_file = root / "extracted.txt"
+            extractor = FileExtractor()
+            
+            # Should not raise an error due to fallback encoding
+            stats = extractor.extract(root, output_file)
+            assert stats.processed_files == 1
+
+    def test_extract_progress_callback(self):
+        """Test progress callback functionality."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+            
+            (root / "file1.txt").write_text("Content 1", encoding="utf-8")
+            (root / "file2.txt").write_text("Content 2", encoding="utf-8")
+            
+            output_file = root / "extracted.txt"
+            extractor = FileExtractor()
+            
+            # Mock progress callback
+            progress_calls = []
+            def progress_callback(*, advance, description):
+                progress_calls.append((advance, description))
+            
+            stats = extractor.extract(root, output_file, progress_callback=progress_callback)
+            
+            assert len(progress_calls) == 2
+            assert all(call[0] == 1 for call in progress_calls)  # Each call advances by 1
+
+    def test_extract_progress_counts_skipped_files(self):
+        """Progress callback should advance for skipped files."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+            (root / "keep.txt").write_text("include", encoding="utf-8")
+            (root / "ignore.png").write_text("fake", encoding="utf-8")
+
+            output_file = root / "bundle.txt"
+            extractor = FileExtractor(skip_extensions={".png"})
+
+            progress_calls = []
+
+            extractor.extract(
+                root,
+                output_file,
+                progress_callback=lambda *, advance, description=None: progress_calls.append((advance, description)),
+            )
+
+            # Two files scanned even though only text processed
+            assert len(progress_calls) == 2
+            assert sum(call[0] for call in progress_calls) == 2
+
+    def test_extract_creates_missing_output_directory(self):
+        """Output directories should be created automatically."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+            (root / "file.txt").write_text("content", encoding="utf-8")
+
+            output_file = Path(tmpdir) / "nested" / "dir" / "result.txt"
+            extractor = FileExtractor()
+
+            stats = extractor.extract(root, output_file)
+            assert stats.output == output_file.resolve()
+            assert output_file.exists()
+
+    def test_extract_removes_temp_file_on_failure(self):
+        """Temporary files should be cleaned up when extraction fails."""
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = Path(tmpdir)
+            (root / "file.txt").write_text("content", encoding="utf-8")
+
+            output_file = Path(tmpdir) / "out" / "bundle.txt"
+            extractor = FileExtractor()
+
+            def boom(*args, **kwargs):
+                raise RuntimeError("boom")
+
+            with patch.object(FileExtractor, "_read_file_content", side_effect=boom):
+                with pytest.raises(RuntimeError):
+                    extractor.extract(root, output_file)
+
+            assert not output_file.exists()
+            tmp_files = list(output_file.parent.glob(f"{output_file.name}.*.tmp"))
+            assert tmp_files == []
+
+
+if __name__ == "__main__":
+    pytest.main([__file__])
+
+
+--- tests/test_main.py ---
+"""Tests for proxtract.main CLI helpers."""
+
+from __future__ import annotations
+
+import argparse
+from pathlib import Path
+from types import SimpleNamespace
+
+import pytest
+from rich.console import Console
+
+from proxtract import main as prox_main
+
+
+def _make_args(**overrides) -> argparse.Namespace:
+    defaults = {
+        "path": ".",
+        "output": None,
+        "max_size": None,
+        "compact": False,
+        "no_compact": False,
+        "skip_empty": False,
+        "no_skip_empty": False,
+        "use_gitignore": False,
+        "no_gitignore": False,
+        "include": None,
+        "exclude": None,
+        "force_include": False,
+        "no_force_include": False,
+        "tokenizer_model": None,
+        "no_token_count": False,
+        "copy": False,
+        "save_config": False,
+    }
+    defaults.update(overrides)
+    return argparse.Namespace(**defaults)
+
+
+class DummyExtractor:
+    def __init__(self, result):
+        self._result = result
+        self.calls: list[tuple[Path, Path]] = []
+
+    def extract(self, root: Path, output: Path):
+        self.calls.append((root, output))
+        if isinstance(self._result, Exception):
+            raise self._result
+        return self._result
+
+
+def test_run_cli_extract_success(tmp_path, monkeypatch):
+    """_run_cli_extract should configure state and run extractor."""
+
+    stats = SimpleNamespace(
+        processed_files=3,
+        total_bytes=4096,
+        token_count=500,
+        errors=["token warning"],
+        output=tmp_path / "bundle.txt",
+    )
+    extractor = DummyExtractor(stats)
+    monkeypatch.setattr(prox_main.AppState, "create_extractor", lambda self: extractor)
+
+    args = _make_args(
+        path=str(tmp_path),
+        output=str(tmp_path / "result.txt"),
+        max_size=256,
+        compact=True,
+        skip_empty=False,
+        no_skip_empty=True,
+        use_gitignore=True,
+        include=["*.py"],
+        exclude=["*.log"],
+        force_include=True,
+        tokenizer_model="gpt-4o-mini",
+    )
+    console = Console(record=True)
+
+    exit_code = prox_main._run_cli_extract(args, console)
+
+    assert exit_code == 0
+    assert extractor.calls and extractor.calls[0][0] == tmp_path
+    output_text = console.export_text()
+    assert "Done." in output_text
+    assert "token warning" in output_text
+
+
+def test_run_cli_extract_failure(tmp_path, monkeypatch):
+    """Errors from extractor should be reported and return code 2."""
+
+    extractor = DummyExtractor(RuntimeError("boom"))
+    monkeypatch.setattr(prox_main.AppState, "create_extractor", lambda self: extractor)
+
+    args = _make_args(path=str(tmp_path))
+    console = Console(record=True)
+
+    exit_code = prox_main._run_cli_extract(args, console)
+
+    assert exit_code == 2
+    assert "Extraction failed" in console.export_text()
+
+
+def test_main_launches_tui_when_no_args(monkeypatch):
+    """main() should launch the TUI when no arguments are provided."""
+
+    called = {}
+
+    def fake_launch():
+        called["ran"] = True
+
+    monkeypatch.setattr(prox_main, "_launch_tui", fake_launch)
+    prox_main.main([])
+    assert called.get("ran") is True
+
+
+def test_main_dispatches_extract(monkeypatch):
+    """main() should dispatch extract subcommand and exit with its return code."""
+
+    calls: dict[str, argparse.Namespace] = {}
+
+    def fake_run(args, _console):
+        calls["args"] = args
+        return 0
+
+    monkeypatch.setattr(prox_main, "_run_cli_extract", fake_run)
+
+    with pytest.raises(SystemExit) as exc:
+        prox_main.main(["extract", "."])
+
+    assert exc.value.code == 0
+    assert isinstance(calls["args"], argparse.Namespace)
+
+
+--- tests/test_tui_main_screen.py ---
+"""Tests for TUI main screen parsing helpers."""
+
+from __future__ import annotations
+
+from proxtract.tui.screens.main_screen import MainScreen
+
+
+def test_parse_value_bool_strings():
+    """Boolean parser should treat common falsy strings as False."""
+    assert MainScreen._parse_value("false", "bool", default=True) is False
+    assert MainScreen._parse_value("no", "bool", default=True) is False
+    assert MainScreen._parse_value("0", "bool", default=True) is False
+    assert MainScreen._parse_value("yes", "bool", default=False) is True
+
+
+--- tests/test_tui_responsive.py ---
+"""Tests for TUI responsive design to small terminals."""
+
+from __future__ import annotations
+
+from unittest.mock import Mock
+
+import pytest
+
+from proxtract.state import AppState
+from proxtract.tui.screens.main_screen import MainScreen
+from proxtract.tui.screens.extract_screen import ExtractScreen
+
+
+class TestResponsiveDesign:
+    """Test responsive breakpoint detection and layout adaptation."""
+
+    def test_main_screen_breakpoint_detection(self):
+        """Test that MainScreen correctly detects and applies responsive breakpoints."""
+        app_state = Mock(spec=AppState)
+        screen = MainScreen(app_state)
+        
+        # Test tiny width (very small terminals)
+        screen._update_breakpoints(40)
+        assert screen.has_class("bp-tiny")
+        assert not screen.has_class("bp-narrow")
+        assert not screen.has_class("bp-compact")
+        
+        # Test narrow width (small-medium terminals)  
+        screen.set_class(False, "bp-tiny")  # Reset tiny class
+        screen._update_breakpoints(70)
+        assert not screen.has_class("bp-tiny")
+        assert screen.has_class("bp-narrow")
+        assert not screen.has_class("bp-compact")
+        
+        # Test compact width (compact view threshold)
+        screen.set_class(False, "bp-narrow")  # Reset narrow class
+        screen._update_breakpoints(50)
+        assert not screen.has_class("bp-tiny")
+        assert not screen.has_class("bp-narrow")
+        assert screen.has_class("bp-compact")
+        
+        # Test normal width (large terminals)
+        screen.set_class(False, "bp-compact")  # Reset compact class
+        screen._update_breakpoints(120)
+        assert not screen.has_class("bp-tiny")
+        assert not screen.has_class("bp-narrow")
+        assert not screen.has_class("bp-compact")
+
+    def test_extract_screen_breakpoint_detection(self):
+        """Test that ExtractScreen correctly detects and applies responsive breakpoints."""
+        app_state = Mock(spec=AppState)
+        screen = ExtractScreen(app_state)
+        
+        # Test tiny width detection
+        screen._update_breakpoints(40)
+        assert screen.has_class("bp-tiny")
+        assert not screen.has_class("bp-narrow")
+        assert not screen.has_class("bp-compact")
+        
+        # Test narrow width detection
+        screen.set_class(False, "bp-tiny")
+        screen._update_breakpoints(70)
+        assert not screen.has_class("bp-tiny")
+        assert screen.has_class("bp-narrow")
+        assert not screen.has_class("bp-compact")
+
+    def test_breakpoint_width_constants(self):
+        """Test that breakpoint width constants are reasonable for small terminals."""
+        # Tiny screens should work with very small widths
+        assert MainScreen.TINY_WIDTH == 45
+        assert ExtractScreen.TINY_WIDTH == 45
+        
+        # Narrow should be reasonable for small terminals
+        assert MainScreen.NARROW_WIDTH == 80
+        assert ExtractScreen.NARROW_WIDTH == 80
+        
+        # Compact should be the most restrictive
+        assert MainScreen.COMPACT_WIDTH == 60
+        assert ExtractScreen.COMPACT_WIDTH == 60
+
+    @pytest.mark.parametrize("width,expected_classes", [
+        (30, {"bp-tiny"}),
+        (40, {"bp-tiny"}),
+        (45, {"bp-tiny"}),  # Exactly at tiny threshold
+        (50, {"bp-compact"}),  # Should be compact, not tiny
+        (60, {"bp-compact"}),  # Exactly at compact threshold
+        (70, {"bp-narrow"}),  # Should be narrow, not compact
+        (80, {"bp-narrow"}),  # Exactly at narrow threshold
+        (120, set()),  # Normal view
+    ])
+    def test_main_screen_breakpoint_combinations(self, width: int, expected_classes: set):
+        """Test various width combinations to ensure correct breakpoint application."""
+        app_state = Mock(spec=AppState)
+        screen = MainScreen(app_state)
+        
+        screen._update_breakpoints(width)
+        
+        for class_name in ["bp-tiny", "bp-narrow", "bp-compact"]:
+            expected = class_name in expected_classes
+            actual = screen.has_class(class_name)
+            assert actual == expected, f"Width {width}: expected {class_name}={expected}, got {actual}"
+
+--- tests/test_utils.py ---
+"""Tests for proxtract.utils helpers."""
+
+from __future__ import annotations
+
+from proxtract.utils import normalize_bool
+
+
+def test_normalize_bool_from_strings():
+    assert normalize_bool("true", False) is True
+    assert normalize_bool("FALSE", True) is False
+    assert normalize_bool("no", True) is False
+    assert normalize_bool("1", False) is True
+    assert normalize_bool("0", True) is False
+
+
+def test_normalize_bool_from_numbers_and_defaults():
+    assert normalize_bool(1, False) is True
+    assert normalize_bool(0, True) is False
+    assert normalize_bool(3, False) is True
+    assert normalize_bool(-1, False) is True
+    assert normalize_bool(object(), True) is True
+
+
+--- tests/tui/test_completion_input.py ---
+import os
+from pathlib import Path
+
+import pytest
+
+from proxtract.tui.widgets import CompletionInput
+
+
+@pytest.mark.tui
+class TestCompletionInput:
+    def test_list_mode_completion_preserves_prefix(self):
+        widget = CompletionInput(mode="list", suggestions=["alpha", "beta", "gamma"])
+        prefix, fragment = widget._split_list_seed("foo, be")
+        assert prefix == "foo, "
+        assert fragment == "be"
+
+        matches = widget._gather_completions("foo, be")
+        assert matches == ["foo, beta"]
+
+    def test_list_mode_completion_handles_leading_whitespace(self):
+        widget = CompletionInput(mode="list", suggestions=["alpha", "beta"])
+        prefix, fragment = widget._split_list_seed("  be")
+        assert prefix == "  "
+        assert fragment == "be"
+
+        matches = widget._gather_completions("  be")
+        assert matches == ["  beta"]
+
+    def test_path_mode_completion(self, tmp_path: Path, monkeypatch: pytest.MonkeyPatch):
+        nested = tmp_path / "nested"
+        nested.mkdir()
+        file_path = tmp_path / "demo.txt"
+        file_path.write_text("data", encoding="utf-8")
+
+        widget = CompletionInput(mode="path")
+
+        # Ensure deterministic ordering across platforms
+        monkeypatch.chdir(tmp_path)
+        completions = widget._gather_completions("")
+        assert [Path(c).name for c in completions] == ["nested", "demo.txt"]
+
+        completions = widget._gather_completions(str(tmp_path) + os.sep)
+        assert completions[0].endswith("nested" + os.sep)
+        assert completions[1].endswith("demo.txt")
+
+
+============================================================
+# Total files processed: 32
+# Total size: 165KB
+# Total tokens: 38908

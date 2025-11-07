@@ -1,85 +1,95 @@
-"""Primary dashboard screen for the Proxtract TUI."""
+"""Focused extractor-first screen for the Proxtract TUI."""
 
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Any, Callable, Sequence
+from functools import partial
+from pathlib import Path
+from typing import Optional
 
 from textual import events
 from textual.app import ComposeResult
-from textual.containers import Grid, Vertical
+from textual.containers import Horizontal, Vertical
 from textual.message import Message
 from textual.screen import Screen
-from textual.widgets import Footer, Header, Label, ListView
+from textual.widgets import Button, Footer, Header, Label, ProgressBar
+from textual.worker import Worker, WorkerState
 
-from ...core import ExtractionStats
+from ...core import ExtractionError, ExtractionStats
 from ...state import AppState
-from ...utils import normalize_bool
-from ..widgets import ActionItem, SettingItem, SettingMetadata, SummaryDisplay
-from .edit_setting_screen import EditSettingScreen
-from .extract_screen import ExtractScreen
-
-
-@dataclass(frozen=True)
-class SettingSpec:
-    """Definition describing how to render and edit a setting."""
-
-    attr: str
-    label: str
-    description: str
-    setting_type: str
-    formatter: Callable[[Any], str]
+from ..widgets import CompletionInput, SummaryDisplay
+from .settings_screen import SettingsScreen
+from .summary_screen import SummaryScreen
 
 
 class MainScreen(Screen):
-    """Top-level screen that exposes settings and key actions."""
+    """Single-screen extractor workflow with progressive disclosure controls."""
 
     ID = "main"
-    TINY_WIDTH = 45      # Very small terminals
-    NARROW_WIDTH = 80     # Small-medium terminals
-    COMPACT_WIDTH = 60    # Compact view threshold
+    TINY_WIDTH = 45
+    NARROW_WIDTH = 80
+    COMPACT_WIDTH = 60
+
+    @dataclass
+    class ExtractionProgress(Message):
+        processed: int
+        total: int
+        description: str
+
+    @dataclass
+    class ExtractionStarted(Message):
+        total: int
+
+    @dataclass
+    class ExtractionFailed(Message):
+        message: str
+
+    @dataclass
+    class ExtractionCompleted(Message):
+        stats: ExtractionStats
 
     def __init__(self, app_state: AppState) -> None:
         super().__init__(id=self.ID)
         self.app_state = app_state
-        self._settings_view: ListView | None = None
-        self._actions_view: ListView | None = None
-        self._summary: SummaryDisplay | None = None
-        self._items: dict[str, SettingItem] = {}
+        self._source_input: CompletionInput | None = None
+        self._output_input: CompletionInput | None = None
+        self._extract_button: Button | None = None
+        self._settings_button: Button | None = None
+        self._progress_bar: ProgressBar | None = None
+        self._status_label: Label | None = None
+        self._summary_widget: SummaryDisplay | None = None
+        self._summary_container: Vertical | None = None
+        self._worker: Worker | None = None
 
     def compose(self) -> ComposeResult:
-        yield Header(show_clock=True)
+        yield Header(show_clock=False)
         yield Vertical(
+            Label("Proxtract", id="title"),
+            Label("Укажите проект и получите все его файлы в одном пакете.", id="subtitle"),
             Vertical(
-                Label("Proxtract", id="title"),
-                Label(
-                    "Управляйте параметрами извлечения и запускайте сценарии в несколько нажатий.",
-                    id="subtitle",
-                ),
-                id="hero-card",
-                classes="panel-card",
-            ),
-            Grid(
                 Vertical(
-                    Label("Настройки", id="settings-header", classes="card-title"),
-                    Label("Тонко настройте, что попадёт в пакет.", classes="card-description"),
-                    ListView(id="settings-list"),
-                    id="settings-card",
-                    classes="panel-card",
+                    Label("Директория проекта", classes="form-label"),
+                    CompletionInput(id="source-input", mode="path", classes="form-input"),
+                    classes="form-field",
                 ),
                 Vertical(
-                    Label("Действия", id="actions-header", classes="card-title"),
-                    Label("Запускайте сбор или доп. сценарии.", classes="card-description"),
-                    ListView(id="actions-list"),
-                    id="actions-card",
-                    classes="panel-card",
+                    Label("Выходной файл", classes="form-label"),
+                    CompletionInput(id="output-input", mode="path", classes="form-input"),
+                    classes="form-field",
                 ),
-                id="content",
-            ),
-            Vertical(
-                Label("Сводка последнего запуска", id="summary-header", classes="card-title"),
-                SummaryDisplay(),
-                id="summary-card",
+                Horizontal(
+                    Button("Извлечь", id="extract", variant="primary"),
+                    Button("Настройки", id="settings", variant="primary"),
+                    id="form-actions",
+                ),
+                ProgressBar(id="extract-progress", total=100),
+                Label("Готово к запуску.", id="extract-status"),
+                Vertical(
+                    Label("Сводка последнего запуска", id="summary-header"),
+                    SummaryDisplay(),
+                    id="summary-section",
+                ),
+                id="extractor-form",
                 classes="panel-card",
             ),
             id="main-body",
@@ -87,237 +97,217 @@ class MainScreen(Screen):
         yield Footer()
 
     def on_mount(self) -> None:
-        self._settings_view = self.query_one("#settings-list", ListView)
-        self._actions_view = self.query_one("#actions-list", ListView)
-        self._summary = self.query_one(SummaryDisplay)
+        self._source_input = self.query_one("#source-input", CompletionInput)
+        self._output_input = self.query_one("#output-input", CompletionInput)
+        self._extract_button = self.query_one("#extract", Button)
+        self._settings_button = self.query_one("#settings", Button)
+        self._progress_bar = self.query_one(ProgressBar)
+        self._status_label = self.query_one("#extract-status", Label)
+        self._summary_widget = self.query_one(SummaryDisplay)
+        self._summary_container = self.query_one("#summary-section", Vertical)
 
-        for spec in self._setting_specs:
-            metadata = SettingMetadata(
-                key=spec.attr,
-                label=spec.label,
-                description=spec.description,
-                value_formatter=spec.formatter,
-                setting_type=spec.setting_type,
-            )
-            item = SettingItem(metadata, lambda attr=spec.attr: getattr(self.app_state, attr))
-            self._items[spec.attr] = item
-            self._settings_view.append(item)
+        self._source_input.value = str(self.app_state.source_root)
+        self._output_input.value = str(self.app_state.output_path)
+        self._source_input.focus()
 
-        self._actions_view.append(
-            ActionItem(
-                "Extract Project",
-                "Launch the extraction workflow with the current settings.",
-                action_id="extract",
-            )
-        )
+        if self._progress_bar is not None:
+            self._progress_bar.display = False
 
-        if self.app_state.last_stats is not None:
-            self._summary.update_stats(self.app_state.last_stats)
+        if self.app_state.last_stats is not None and self._summary_widget is not None:
+            self._summary_widget.update_stats(self.app_state.last_stats)
+        self._update_summary_visibility(self.app_state.last_stats is not None)
         self._update_breakpoints(self.size.width if self.size is not None else None)
 
     def on_resize(self, event: events.Resize) -> None:
         self._update_breakpoints(event.size.width)
 
-    def on_list_view_selected(self, event: ListView.Selected) -> None:
-        if event.control.id == "settings-list":
-            self._handle_setting_selected(event.item)
-        elif event.control.id == "actions-list":
-            self._handle_action_selected(event.item)
-
-    def _handle_setting_selected(self, item) -> None:
-        if not isinstance(item, SettingItem):
-            return
-
-        attr = item.key
-        spec = self._spec_by_attr(attr)
-        current_value = getattr(self.app_state, attr)
-
-        if spec.setting_type == "bool":
-            setattr(self.app_state, attr, not bool(current_value))
-            item.update_content()
-            return
-
-        self.app.push_screen(
-            EditSettingScreen(
-                key=spec.attr,
-                label=spec.label,
-                description=spec.description,
-                setting_type=spec.setting_type,
-                initial_value=self._value_to_string(current_value, spec.setting_type),
-            ),
-            callback=lambda value, attr=attr: self._apply_setting_update(attr, value),
-        )
-
-    def _handle_action_selected(self, item) -> None:
-        if not isinstance(item, ActionItem):
-            return
-
-        if item.action_id == "extract":
+    def on_button_pressed(self, event: Button.Pressed) -> None:
+        if event.button.id == "extract":
+            if self._worker is not None and self._worker.is_running:
+                self._cancel_extraction()
+            else:
+                self._begin_extraction()
+        elif event.button.id == "settings":
             self.app.push_screen(
-                ExtractScreen(self.app_state),
-                callback=self._handle_extract_result,
+                SettingsScreen(self.app_state),
+                callback=lambda _: self._handle_settings_closed(),
             )
 
-    def _handle_extract_result(self, stats: ExtractionStats | None) -> None:
-        if stats is None:
-            stats = self.app_state.last_stats
+    def _handle_settings_closed(self) -> None:
+        if self._output_input is not None:
+            self._output_input.value = str(self.app_state.output_path)
 
-        if stats is not None and self._summary is not None:
-            self._summary.update_stats(stats)
-
-        output_item = self._items.get("output_path")
-        if output_item is not None:
-            output_item.update_content()
-
-    def _apply_setting_update(self, attr: str, raw_value: str | None) -> None:
-        if raw_value is None:
+    def _begin_extraction(self) -> None:
+        if self._source_input is None or self._output_input is None:
             return
 
-        spec = self._spec_by_attr(attr)
-        current_value = getattr(self.app_state, attr, None)
-        parsed = self._parse_value(raw_value, spec.setting_type, default=current_value)
-        setattr(self.app_state, attr, parsed)
+        root_text = (self._source_input.value or "").strip()
+        output_text = (self._output_input.value or "").strip()
 
-        item = self._items.get(attr)
-        if item is not None:
-            item.update_content()
+        if not root_text or not output_text:
+            self.app.notify("Укажите исходную директорию и выходной файл.", severity="warning")
+            return
+
+        root = Path(root_text).expanduser()
+        if not root.exists() or not root.is_dir():
+            self.app.notify("Указанная директория недоступна.", severity="error")
+            return
+
+        self.app_state.set_source_root(root)
+        self.app_state.set_output_path(output_text)
+
+        if self._progress_bar is not None:
+            self._progress_bar.display = True
+            self._progress_bar.update(progress=0, total=100)
+        self._update_status("Подготовка к извлечению…")
+        self._set_busy(True)
+
+        work = partial(self._execute_extraction, root, self.app_state.output_path)
+        self._worker = self.run_worker(
+            work,
+            name=str(root),
+            group=str(self.app_state.output_path),
+            exclusive=True,
+            thread=True,
+            exit_on_error=False,
+        )
+
+    def _cancel_extraction(self) -> None:
+        if self._worker is None:
+            return
+        if self._worker.is_running:
+            self._worker.cancel()
+        self._update_status("Отмена…")
+
+    def _execute_extraction(self, root: Path, output: Path) -> None:
+        self.app.call_from_thread(self._update_status, "Сканирование файлов…")
+
+        try:
+            total_files = sum(1 for path in root.rglob("*") if path.is_file())
+        except Exception as exc:  # pragma: no cover
+            self.app.call_from_thread(self.post_message, self.ExtractionFailed(str(exc)))
+            return
+
+        self.app.call_from_thread(self.post_message, self.ExtractionStarted(total=max(total_files, 1)))
+
+        processed = 0
+
+        def progress_callback(*, advance: int, description: Optional[str] = None) -> None:
+            nonlocal processed
+            processed += advance
+            self.app.call_from_thread(
+                self.post_message,
+                self.ExtractionProgress(
+                    processed=processed,
+                    total=max(total_files, 1),
+                    description=description or "",
+                ),
+            )
+
+        extractor = self.app_state.create_extractor()
+
+        try:
+            stats = extractor.extract(root, output, progress_callback=progress_callback)
+        except ExtractionError as exc:
+            self.app.call_from_thread(self.post_message, self.ExtractionFailed(str(exc)))
+            return
+
+        if total_files == 0 and processed == 0:
+            processed = 1
+            self.app.call_from_thread(
+                self.post_message,
+                self.ExtractionProgress(processed=processed, total=1, description=""),
+            )
+
+        self.app_state.last_stats = stats
+        self.app.call_from_thread(self.post_message, self.ExtractionCompleted(stats))
+
+    def on_main_screen_extraction_started(self, message: ExtractionStarted) -> None:
+        if self._progress_bar is not None:
+            self._progress_bar.update(progress=0, total=message.total)
+        self._update_status("Сканирование файлов…")
+
+    def on_main_screen_extraction_progress(self, message: ExtractionProgress) -> None:
+        if self._progress_bar is not None:
+            self._progress_bar.update(progress=message.processed, total=message.total)
+        if message.description:
+            self._update_status(f"Обработка: {message.description}")
+
+    def on_main_screen_extraction_failed(self, message: ExtractionFailed) -> None:
+        self._reset_busy_state()
+        self._update_status(f"Ошибка: {message.message}")
+        self.app.notify(f"Извлечение не удалось: {message.message}", severity="error")
+
+    def on_main_screen_extraction_completed(self, message: ExtractionCompleted) -> None:
+        self._reset_busy_state()
+        if self._summary_widget is not None:
+            self._summary_widget.update_stats(message.stats)
+        self._update_summary_visibility(True)
+        self._update_status("Извлечение завершено.")
+        self.app.push_screen(SummaryScreen(message.stats))
+
+    def on_worker_state_changed(self, event: Worker.StateChanged) -> None:
+        if self._worker is None or event.worker is not self._worker:
+            return
+
+        if event.state == WorkerState.RUNNING:
+            return
+
+        self._worker = None
+        if event.state == WorkerState.CANCELLED:
+            self._reset_busy_state()
+            self._update_status("Извлечение отменено.")
+            event.stop()
+            return
+
+        if event.state == WorkerState.ERROR:
+            self._reset_busy_state()
+            error = event.worker.error
+            message = str(error) if error is not None else "Неизвестная ошибка."
+            self._update_status(f"Ошибка: {message}")
+            self.app.notify(f"Извлечение не удалось: {message}", severity="error")
+            event.stop()
+
+    def _reset_busy_state(self) -> None:
+        self._set_busy(False)
+        if self._progress_bar is not None:
+            self._progress_bar.display = False
+
+    def _set_busy(self, busy: bool) -> None:
+        if self._source_input is not None:
+            self._source_input.disabled = busy
+        if self._output_input is not None:
+            self._output_input.disabled = busy
+        if self._settings_button is not None:
+            self._settings_button.disabled = busy
+        if self._extract_button is not None:
+            self._extract_button.label = "Отмена" if busy else "Извлечь"
+            self._extract_button.variant = "error" if busy else "primary"
+        if busy and self._progress_bar is not None:
+            self._progress_bar.display = True
+
+    def _update_status(self, message: str) -> None:
+        if self._status_label is not None:
+            self._status_label.update(message)
+
+    def _update_summary_visibility(self, show: bool) -> None:
+        if self._summary_container is None:
+            return
+        self._summary_container.display = show
 
     def _update_breakpoints(self, width: int | None) -> None:
-        # Remove all responsive classes first
         self.set_class(False, "bp-tiny")
         self.set_class(False, "bp-narrow")
         self.set_class(False, "bp-compact")
-        
+
         if width is None:
             return
-            
-        # Apply classes in order of priority (most restrictive first)
         if width <= self.TINY_WIDTH:
             self.set_class(True, "bp-tiny")
         elif width <= self.COMPACT_WIDTH:
             self.set_class(True, "bp-compact")
         elif width <= self.NARROW_WIDTH:
             self.set_class(True, "bp-narrow")
-
-    @property
-    def _setting_specs(self) -> Sequence[SettingSpec]:
-        return (
-            SettingSpec(
-                attr="output_path",
-                label="Output Path",
-                description="Destination file for extracted content.",
-                setting_type="path",
-                formatter=lambda value: str(value),
-            ),
-            SettingSpec(
-                attr="max_size_kb",
-                label="Max File Size (KB)",
-                description="Files larger than this size are skipped.",
-                setting_type="int",
-                formatter=lambda value: f"{value} KB",
-            ),
-            SettingSpec(
-                attr="compact_mode",
-                label="Compact Mode",
-                description="Use minimal separators between files in the bundle.",
-                setting_type="bool",
-                formatter=self._format_bool,
-            ),
-            SettingSpec(
-                attr="skip_empty",
-                label="Skip Empty Files",
-                description="Do not include files without content.",
-                setting_type="bool",
-                formatter=self._format_bool,
-            ),
-            SettingSpec(
-                attr="use_gitignore",
-                label="Respect .gitignore",
-                description="Honor .gitignore patterns when scanning directories.",
-                setting_type="bool",
-                formatter=self._format_bool,
-            ),
-            SettingSpec(
-                attr="force_include",
-                label="Force Include Priority",
-                description="When enabled, include patterns bypass excludes and .gitignore.",
-                setting_type="bool",
-                formatter=self._format_bool,
-            ),
-            SettingSpec(
-                attr="include_patterns",
-                label="Include Patterns",
-                description="Glob patterns that force inclusion (comma separated).",
-                setting_type="list",
-                formatter=self._format_list,
-            ),
-            SettingSpec(
-                attr="exclude_patterns",
-                label="Exclude Patterns",
-                description="Glob patterns that exclude matches (comma separated).",
-                setting_type="list",
-                formatter=self._format_list,
-            ),
-            SettingSpec(
-                attr="tokenizer_model",
-                label="Tokenizer Model",
-                description="Model name passed to the token counter.",
-                setting_type="str",
-                formatter=str,
-            ),
-            SettingSpec(
-                attr="enable_token_count",
-                label="Count Tokens",
-                description="Estimate token usage for the extracted bundle.",
-                setting_type="bool",
-                formatter=self._format_bool,
-            ),
-            SettingSpec(
-                attr="copy_to_clipboard",
-                label="Copy to Clipboard",
-                description="Copy extraction result to clipboard when supported.",
-                setting_type="bool",
-                formatter=self._format_bool,
-            ),
-        )
-
-    def _spec_by_attr(self, attr: str) -> SettingSpec:
-        for spec in self._setting_specs:
-            if spec.attr == attr:
-                return spec
-        raise KeyError(attr)
-
-    @staticmethod
-    def _format_bool(value: Any) -> str:
-        return "On" if bool(value) else "Off"
-
-    @staticmethod
-    def _format_list(value: Any) -> str:
-        if not value:
-            return "(none)"
-        return ", ".join(str(item) for item in value)
-
-    @staticmethod
-    def _value_to_string(value: Any, setting_type: str) -> str:
-        if setting_type == "list":
-            return ", ".join(str(item) for item in value) if value else ""
-        return str(value)
-
-    @staticmethod
-    def _parse_value(value: str, setting_type: str, *, default: Any = None) -> Any:
-        if setting_type == "int":
-            return int(value)
-        if setting_type == "list":
-            parts = [part.strip() for part in value.split(",")]
-            return [part for part in parts if part]
-        if setting_type == "bool":
-            fallback = bool(default) if isinstance(default, bool) else False
-            return normalize_bool(value, fallback)
-        if setting_type == "path":
-            from pathlib import Path
-
-            return Path(value).expanduser()
-        return value
 
 
 __all__ = ["MainScreen"]

@@ -13,6 +13,7 @@ from .core import ExtractionStats, FileExtractor
 class AppState:
     """Mutable configuration shared across TUI widgets and CLI commands."""
 
+    source_root: Path = field(default_factory=lambda: Path.cwd())
     output_path: Path = field(default_factory=lambda: Path("extracted.txt"))
     max_size_kb: int = 500
     compact_mode: bool = True
@@ -50,6 +51,9 @@ class AppState:
 
     def set_output_path(self, path: str | Path) -> None:
         self.output_path = Path(path).expanduser()
+
+    def set_source_root(self, path: str | Path) -> None:
+        self.source_root = Path(path).expanduser()
 
     def set_patterns(
         self,

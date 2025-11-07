@@ -1,22 +1,26 @@
+/* Global theming */
+Screen {
+    background: #1E1E2E;
+    color: #CDD6F4;
+}
+
 Screen#main {
     layout: vertical;
     padding: 1 3;
-    background: $background 98%;
-    color: $text;
 }
 
 Header, Footer {
-    background: $primary 70%;
-    color: $text;
+    background: #313244;
+    color: #CDD6F4;
     border: none;
 }
 
 Header {
-    border-bottom: round $primary 40%;
+    border-bottom: tall #89B4FA 40%;
 }
 
 Footer {
-    border-top: round $primary 40%;
+    border-top: tall #89B4FA 40%;
 }
 
 #main-body {
@@ -24,383 +28,188 @@ Footer {
 }
 
 .panel-card {
-    layout: vertical;
-    border: round $surface 70%;
-    background: $surface 92%;
-    padding: 1 2;
+    background: #313244;
+    border: round #89B4FA 40%;
+    padding: 2;
     width: 100%;
-}
-
-#hero-card {
-    background: $primary 8%;
-    border: round $primary 40%;
 }
 
 #title {
     text-style: bold;
-    color: $primary 90%;
-    padding-bottom: 0;
+    color: #89B4FA;
 }
 
 #subtitle {
-    color: $text 70%;
+    color: #CDD6F4 70%;
 }
 
-#content {
-    layout: grid;
-    grid-size: 2;
-    grid-gutter: 2;
-    margin-top: 1;
+#extractor-form {
+    layout: vertical;
 }
 
-#summary-card {
-    margin-top: 1;
+.form-field {
+    layout: vertical;
 }
 
-.card-title {
+.form-label {
     text-style: bold;
-    color: $accent 90%;
+    color: #FAB387;
 }
 
-.card-description {
-    color: $text 70%;
-    margin-bottom: 1;
+.form-input {
+    width: 100%;
+    border: round #45475A;
+    background: #1E1E2E;
+    padding: 0 1;
 }
 
-#settings-card,
-#actions-card {
-    min-height: 16;
-}
-
-#settings-list,
-#actions-list {
-    border: none;
-    background: transparent;
-    padding: 0;
-    height: 100%;
-    min-height: 12;
-    scrollbar-size: 1 1;
-}
-
-SettingItem,
-ActionItem {
-    border: round $background 60%;
-    background: $background 90%;
-    padding: 1 1;
-    margin: 0 0 1 0;
-    height: auto;
-}
-
-SettingItem:last-child,
-ActionItem:last-child {
-    margin-bottom: 0;
-}
-
-SettingItem.-selected,
-ActionItem.-selected {
-    background: $accent 20%;
-    border: round $accent 60%;
-    color: $text;
-}
-
-#summary-card SummaryDisplay {
+#form-actions {
+    layout: horizontal;
     margin-top: 1;
-    border: round $accent 40%;
-    background: $background 92%;
-    padding: 1 2;
+}
+
+#form-actions Button {
+    min-width: 16;
+    background: #89B4FA;
+    color: #1E1E2E;
+    border: none;
+}
+
+#form-actions Button:focus {
+    background: #89B4FA 80%;
+}
+
+#extract-progress {
+    margin-top: 1;
+    height: 1;
+    border: round #45475A;
+}
+
+#extract-status {
+    color: #CDD6F4 80%;
+}
+
+#summary-section {
+    border: round #45475A;
+    background: #1E1E2E;
+    padding: 1;
+}
+
+#summary-header {
+    text-style: bold;
+    color: #FAB387;
 }
 
 SummaryDisplay {
     width: 100%;
 }
 
-/* Edit setting modal */
+/* Modal scaffolding */
 .modal-card {
-    border: round $surface 70%;
-    background: $surface 95%;
+    background: #313244;
+    border: round #89B4FA 40%;
     padding: 2;
-    width: 60;
+    width: 70;
     max-width: 100%;
-    min-width: 40;
 }
 
-.modal-card.modal-large {
+.modal-large {
     width: 82;
-    min-width: 50;
 }
 
-/* Adaptive modal sizing for different screen sizes */
-Screen.bp-narrow .modal-card {
-    width: 90%;
-    max-width: 60;
-    padding: 1;
-}
-
-Screen.bp-compact .modal-card {
-    width: 95%;
-    padding: 1;
-}
-
-Screen.bp-tiny .modal-card {
-    width: 98%;
-    max-width: 98%;
-    padding: 0;
-    border: none;
-    background: transparent;
-}
-
-#edit-container {
+#settings-header,
+#summary-header {
     layout: vertical;
 }
 
-#edit-header {
-    layout: vertical;
-}
-
-.form-label {
+.group-title {
     text-style: bold;
-    color: $accent 80%;
-    margin-bottom: 1;
-}
-
-.form-field {
-    border: round $background 60%;
-    background: $background 96%;
-    padding: 1;
-    width: 100%;
-}
-
-.form-field CompletionInput,
-.form-field Input {
-    width: 100%;
-    min-width: 36;
-    min-height: 3;
-}
-
-#edit-container .form-field {
+    color: #FAB387;
     margin-top: 1;
 }
 
-#edit-buttons,
-#extract-buttons {
+.settings-group,
+.summary-block {
+    border: round #45475A;
+    background: #1E1E2E;
+    padding: 1;
+}
+
+.switch-field {
+    layout: horizontal;
+    align: left middle;
+}
+
+.switch-label {
+    color: #CDD6F4;
+}
+
+.switch-state {
+    color: #89B4FA;
+    text-style: bold;
+    margin-left: 1;
+}
+
+#settings-buttons,
+#summary-buttons {
     layout: horizontal;
     align-horizontal: right;
     margin-top: 1;
 }
 
-#edit-buttons Button,
-#extract-buttons Button {
-    margin-left: 1;
+#summary-metrics {
+    layout: horizontal;
 }
 
-#edit-buttons Button:first-child,
-#extract-buttons Button:first-child {
-    margin-left: 0;
+.metric-card {
+    border: round #45475A;
+    background: #1E1E2E;
+    padding: 1;
+    width: 1fr;
 }
 
-#extract-container {
-    layout: vertical;
+.metric-label {
+    color: #CDD6F4 70%;
 }
 
-#extract-form {
-    margin-top: 1;
-    layout: grid;
-    grid-size: 2;
-    grid-gutter: 1;
-    grid-columns: 1fr 1fr;
+.metric-value {
+    text-style: bold;
+    color: #89B4FA;
 }
 
-#extract-progress,
-#extract-status,
-SummaryDisplay#summary {
-    margin-top: 1;
+.summary-row {
+    color: #CDD6F4;
 }
 
-#extract-progress {
-    height: 1;
-    border: round $background 60%;
+.summary-empty {
+    color: #CDD6F4 70%;
 }
 
-#extract-status {
-    color: $text 80%;
-}
-
-/* Responsive breakpoints */
-Screen.bp-tiny {
-    padding: 0 1;
-}
-
-Screen.bp-tiny#main {
-    padding: 0;
-}
-
-Screen.bp-tiny Header,
-Screen.bp-tiny Footer {
-    height: 2;
-}
-
-Screen.bp-tiny #content,
-Screen.bp-tiny #extract-form {
-    grid-size: 1;
-    grid-columns: 1fr;
-}
-
-Screen.bp-tiny .panel-card {
-    border: none;
-    background: transparent;
-    padding: 0;
-}
-
-Screen.bp-tiny .modal-card {
-    width: 98%;
-    max-width: 98%;
-    padding: 0;
-    border: none;
-    background: transparent;
-}
-
-Screen.bp-tiny #subtitle,
-Screen.bp-tiny .card-description {
-    display: none;
-}
-
-Screen.bp-tiny #title {
-    padding-bottom: 0;
-    margin-bottom: 0;
-}
-
-Screen.bp-tiny .card-title {
-    margin-bottom: 0;
-}
-
-Screen.bp-tiny .form-label {
-    margin-bottom: 0;
-}
-
-Screen.bp-tiny #settings-list,
-Screen.bp-tiny #actions-list {
-    min-height: 8;
-}
-
-Screen.bp-tiny SettingItem,
-Screen.bp-tiny ActionItem {
-    height: 3;
-    padding: 0 1;
-    margin: 0;
-}
-
-Screen.bp-tiny SettingItem .label,
-Screen.bp-tiny ActionItem .label {
-    height: 3;
-}
-
-Screen.bp-tiny SummaryDisplay {
-    border: none;
-    padding: 0;
-    height: auto;
-}
-
-Screen.bp-tiny .form-field {
-    padding: 0;
-    border: solid $background 60%;
-}
-
-Screen.bp-tiny CompletionInput,
-Screen.bp-tiny Input {
-    height: 3;
-    padding: 0 1;
-    width: 100%;
-}
-
-Screen.bp-tiny Button {
-    height: 3;
-    padding: 0 2;
-    margin: 0;
-}
-
-Screen.bp-tiny #summary-card {
-    display: none;
-}
-
-/* Compact adaptations (small screens) */
-Screen.bp-compact {
-    padding: 0 1;
-}
-
-Screen.bp-compact Header,
-Screen.bp-compact Footer {
-    height: 3;
-}
-
-Screen.bp-compact #content,
-Screen.bp-compact #extract-form {
-    grid-size: 1;
-    grid-columns: 1fr;
-}
-
-Screen.bp-compact .panel-card {
-    padding: 1 1;
-}
-
-Screen.bp-compact .modal-card {
-    width: 95%;
-    max-width: 95%;
-    padding: 1 1;
-}
-
-Screen.bp-compact #subtitle,
-Screen.bp-compact .card-description {
-    display: none;
-}
-
-Screen.bp-compact #settings-list,
-Screen.bp-compact #actions-list {
-    min-height: 8;
-}
-
-Screen.bp-compact SettingItem,
-Screen.bp-compact ActionItem {
-    height: 4;
-    padding: 0 1;
-}
-
-Screen.bp-compact SummaryDisplay {
-    border: solid $accent 30%;
-    padding: 0 1;
-}
-
-Screen.bp-compact Button {
-    height: 3;
-    padding: 0 1;
-}
-
-/* Narrow adaptations (medium-small screens) */
+/* Responsive tweaks */
 Screen.bp-narrow {
     padding: 1;
 }
 
-Screen.bp-narrow #content,
-Screen.bp-narrow #extract-form {
-    grid-size: 1;
-    grid-columns: 1fr;
-}
-
-Screen.bp-narrow .panel-card {
-    padding: 1 1;
-}
-
-Screen.bp-narrow .modal-card {
-    width: 100%;
-    max-width: 60;
-    padding: 1 1;
-}
-
-Screen.bp-narrow #settings-list,
-Screen.bp-narrow #actions-list {
-    min-height: 10;
-}
-
-Screen.bp-narrow SummaryDisplay {
-    border: solid $accent 40%;
+Screen.bp-compact,
+Screen.bp-tiny {
     padding: 0 1;
+}
+
+Screen.bp-compact #form-actions,
+Screen.bp-tiny #form-actions {
+    layout: vertical;
+}
+
+Screen.bp-compact .modal-card,
+Screen.bp-tiny .modal-card {
+    width: 95%;
+    padding: 1;
+}
+
+Screen.bp-tiny #title {
+    text-align: center;
+}
+
+Screen.bp-tiny #summary-metrics {
+    layout: vertical;
 }

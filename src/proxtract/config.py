@@ -47,6 +47,9 @@ def apply_config(state: AppState, data: Dict[str, Any]) -> AppState:
         except (ValueError, TypeError):
             return default
 
+    source_root = data.get("source_root", state.source_root)
+    state.source_root = Path(source_root).expanduser()
+
     output_path = data.get("output_path", state.output_path)
     state.output_path = Path(output_path).expanduser()
     
@@ -98,6 +101,7 @@ def save_config(state: AppState) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
 
     data: Dict[str, Any] = {
+        "source_root": str(state.source_root),
         "output_path": str(state.output_path),
         "max_size_kb": int(state.max_size_kb),
         "compact_mode": bool(state.compact_mode),
