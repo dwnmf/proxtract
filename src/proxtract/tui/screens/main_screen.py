@@ -35,8 +35,9 @@ class MainScreen(Screen):
     """Top-level screen that exposes settings and key actions."""
 
     ID = "main"
-    NARROW_WIDTH = 110
-    COMPACT_WIDTH = 80
+    TINY_WIDTH = 45      # Very small terminals
+    NARROW_WIDTH = 80     # Small-medium terminals
+    COMPACT_WIDTH = 60    # Compact view threshold
 
     def __init__(self, app_state: AppState) -> None:
         super().__init__(id=self.ID)
@@ -182,10 +183,21 @@ class MainScreen(Screen):
             item.update_content()
 
     def _update_breakpoints(self, width: int | None) -> None:
-        is_narrow = width is not None and width <= self.NARROW_WIDTH
-        is_compact = width is not None and width <= self.COMPACT_WIDTH
-        self.set_class(is_narrow, "bp-narrow")
-        self.set_class(is_compact, "bp-compact")
+        # Remove all responsive classes first
+        self.set_class(False, "bp-tiny")
+        self.set_class(False, "bp-narrow")
+        self.set_class(False, "bp-compact")
+        
+        if width is None:
+            return
+            
+        # Apply classes in order of priority (most restrictive first)
+        if width <= self.TINY_WIDTH:
+            self.set_class(True, "bp-tiny")
+        elif width <= self.COMPACT_WIDTH:
+            self.set_class(True, "bp-compact")
+        elif width <= self.NARROW_WIDTH:
+            self.set_class(True, "bp-narrow")
 
     @property
     def _setting_specs(self) -> Sequence[SettingSpec]:

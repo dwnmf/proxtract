@@ -121,10 +121,32 @@ SummaryDisplay {
     padding: 2;
     width: 60;
     max-width: 100%;
+    min-width: 40;
 }
 
 .modal-card.modal-large {
     width: 82;
+    min-width: 50;
+}
+
+/* Adaptive modal sizing for different screen sizes */
+Screen.bp-narrow .modal-card {
+    width: 90%;
+    max-width: 60;
+    padding: 1;
+}
+
+Screen.bp-compact .modal-card {
+    width: 95%;
+    padding: 1;
+}
+
+Screen.bp-tiny .modal-card {
+    width: 98%;
+    max-width: 98%;
+    padding: 0;
+    border: none;
+    background: transparent;
 }
 
 #edit-container {
@@ -145,6 +167,14 @@ SummaryDisplay {
     border: round $background 60%;
     background: $background 96%;
     padding: 1;
+    width: 100%;
+}
+
+.form-field CompletionInput,
+.form-field Input {
+    width: 100%;
+    min-width: 36;
+    min-height: 3;
 }
 
 #edit-container .form-field {
@@ -177,6 +207,7 @@ SummaryDisplay {
     layout: grid;
     grid-size: 2;
     grid-gutter: 1;
+    grid-columns: 1fr 1fr;
 }
 
 #extract-progress,
@@ -194,6 +225,156 @@ SummaryDisplay#summary {
     color: $text 80%;
 }
 
+/* Responsive breakpoints */
+Screen.bp-tiny {
+    padding: 0 1;
+}
+
+Screen.bp-tiny#main {
+    padding: 0;
+}
+
+Screen.bp-tiny Header,
+Screen.bp-tiny Footer {
+    height: 2;
+}
+
+Screen.bp-tiny #content,
+Screen.bp-tiny #extract-form {
+    grid-size: 1;
+    grid-columns: 1fr;
+}
+
+Screen.bp-tiny .panel-card {
+    border: none;
+    background: transparent;
+    padding: 0;
+}
+
+Screen.bp-tiny .modal-card {
+    width: 98%;
+    max-width: 98%;
+    padding: 0;
+    border: none;
+    background: transparent;
+}
+
+Screen.bp-tiny #subtitle,
+Screen.bp-tiny .card-description {
+    display: none;
+}
+
+Screen.bp-tiny #title {
+    padding-bottom: 0;
+    margin-bottom: 0;
+}
+
+Screen.bp-tiny .card-title {
+    margin-bottom: 0;
+}
+
+Screen.bp-tiny .form-label {
+    margin-bottom: 0;
+}
+
+Screen.bp-tiny #settings-list,
+Screen.bp-tiny #actions-list {
+    min-height: 8;
+}
+
+Screen.bp-tiny SettingItem,
+Screen.bp-tiny ActionItem {
+    height: 3;
+    padding: 0 1;
+    margin: 0;
+}
+
+Screen.bp-tiny SettingItem .label,
+Screen.bp-tiny ActionItem .label {
+    height: 3;
+}
+
+Screen.bp-tiny SummaryDisplay {
+    border: none;
+    padding: 0;
+    height: auto;
+}
+
+Screen.bp-tiny .form-field {
+    padding: 0;
+    border: solid $background 60%;
+}
+
+Screen.bp-tiny CompletionInput,
+Screen.bp-tiny Input {
+    height: 3;
+    padding: 0 1;
+    width: 100%;
+}
+
+Screen.bp-tiny Button {
+    height: 3;
+    padding: 0 2;
+    margin: 0;
+}
+
+Screen.bp-tiny #summary-card {
+    display: none;
+}
+
+/* Compact adaptations (small screens) */
+Screen.bp-compact {
+    padding: 0 1;
+}
+
+Screen.bp-compact Header,
+Screen.bp-compact Footer {
+    height: 3;
+}
+
+Screen.bp-compact #content,
+Screen.bp-compact #extract-form {
+    grid-size: 1;
+    grid-columns: 1fr;
+}
+
+Screen.bp-compact .panel-card {
+    padding: 1 1;
+}
+
+Screen.bp-compact .modal-card {
+    width: 95%;
+    max-width: 95%;
+    padding: 1 1;
+}
+
+Screen.bp-compact #subtitle,
+Screen.bp-compact .card-description {
+    display: none;
+}
+
+Screen.bp-compact #settings-list,
+Screen.bp-compact #actions-list {
+    min-height: 8;
+}
+
+Screen.bp-compact SettingItem,
+Screen.bp-compact ActionItem {
+    height: 4;
+    padding: 0 1;
+}
+
+Screen.bp-compact SummaryDisplay {
+    border: solid $accent 30%;
+    padding: 0 1;
+}
+
+Screen.bp-compact Button {
+    height: 3;
+    padding: 0 1;
+}
+
+/* Narrow adaptations (medium-small screens) */
 Screen.bp-narrow {
     padding: 1;
 }
@@ -201,6 +382,7 @@ Screen.bp-narrow {
 Screen.bp-narrow #content,
 Screen.bp-narrow #extract-form {
     grid-size: 1;
+    grid-columns: 1fr;
 }
 
 Screen.bp-narrow .panel-card {
@@ -209,6 +391,7 @@ Screen.bp-narrow .panel-card {
 
 Screen.bp-narrow .modal-card {
     width: 100%;
+    max-width: 60;
     padding: 1 1;
 }
 
@@ -217,16 +400,7 @@ Screen.bp-narrow #actions-list {
     min-height: 10;
 }
 
-Screen.bp-compact Header,
-Screen.bp-compact Footer {
-    height: 3;
-}
-
-Screen.bp-compact #subtitle {
-    display: none;
-}
-
-Screen.bp-compact #settings-list,
-Screen.bp-compact #actions-list {
-    min-height: 8;
+Screen.bp-narrow SummaryDisplay {
+    border: solid $accent 40%;
+    padding: 0 1;
 }
