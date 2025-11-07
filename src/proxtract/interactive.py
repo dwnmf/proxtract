@@ -214,12 +214,28 @@ class InteractiveShell:
 
     def __init__(self, console: Console | None = None, state: AppState | None = None) -> None:
         self.state = state or apply_config(AppState(), load_config())
-        self.console = console or create_console()
-        color_attr = getattr(self.console, "_proxtract_color_enabled", None)
-        if color_attr is None:
-            color_attr = bool(getattr(self.console, "color_system", None)) and not getattr(self.console, "no_color", False)
-        self._color_enabled = bool(color_attr)
+
+        # Always use our own console configuration so output is predictable.
+        # This avoids environments/wrappers mutating ESC and causing "?[xxm" artifacts.
+        if console is not None:
+            # If an external console is provided, mirror its plain/color preference
+            # into a fresh Proxtract console instance, instead of using it directly.
+            external_no_color = bool(getattr(console, "no_color", False))
+            external_color_system = getattr(console, "color_system", None)
+            want_plain = external_no_color or not external_color_system
+            self.console = create_console(plain=want_plain)
+        else:
+            self.console = create_console()
+
+        # Honor the explicit flag from create_console; fall back to no-color if missing.
+        color_enabled = getattr(self.console, "_proxtract_color_enabled", None)
+        if color_enabled is None:
+            # Conservative: default to plain to avoid leaking raw escape sequences.
+            color_enabled = False
+
+        self._color_enabled = bool(color_enabled)
         self._plain_output = not self._color_enabled
+
         self.completer = ProxtractCompleter()
         self._session: PromptSession | None = None
         self._running = True
@@ -314,6 +330,33 @@ class InteractiveShell:
         self.console.print(table)
 
     def _show_config(self) -> None:
+        # Render settings without any Rich markup/ANSI so output is always clean,
+        # even in environments that escape or corrupt control sequences.
+        if not self._color_enabled:
+            # Plain ASCII table to avoid broken escape sequences.
+            rows = list(self._iter_config())
+            if not rows:
+                self.console.print("Нет доступных настроек.")
+                return
+
+            key_width = max(len(k) for k, _ in rows)
+            val_width = max(len(v) for _, v in rows)
+
+            top_border = "┏" + "━" * (key_width + 2) + "┳" + "━" * (val_width + 2) + "┓"
+            header = f"┃ {'Параметр'.ljust(key_width)} ┃ {'Значение'.ljust(val_width)} ┃"
+            sep = "┡" + "━" * (key_width + 2) + "╇" + "━" * (val_width + 2) + "┩"
+
+            self.console.print("Текущие настройки")
+            self.console.print(top_border)
+            self.console.print(header)
+            self.console.print(sep)
+            for key, value in rows:
+                self.console.print(f"│ {key.ljust(key_width)} │ {value.ljust(val_width)} │")
+            bottom_border = "└" + "─" * (key_width + 2) + "┴" + "─" * (val_width + 2) + "┘"
+            self.console.print(bottom_border)
+            return
+
+        # Colored Rich table when ANSI is supported.
         table = Table(title="Текущие настройки", header_style="bold blue")
         table.add_column("Параметр", style="cyan", no_wrap=True)
         table.add_column("Значение", style="white")
