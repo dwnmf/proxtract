@@ -100,15 +100,15 @@ def test_run_cli_extract_failure(tmp_path, monkeypatch):
     assert "Extraction failed" in console.export_text()
 
 
-def test_main_launches_tui_when_no_args(monkeypatch):
-    """main() should launch the TUI when no arguments are provided."""
+def test_main_launches_repl_when_no_args(monkeypatch):
+    """main() should launch the REPL when no arguments are provided."""
 
     called = {}
 
-    def fake_launch():
+    def fake_launch(console):
         called["ran"] = True
 
-    monkeypatch.setattr(prox_main, "_launch_tui", fake_launch)
+    monkeypatch.setattr(prox_main, "run_interactive", fake_launch)
     prox_main.main([])
     assert called.get("ran") is True
 

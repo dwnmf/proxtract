@@ -100,9 +100,12 @@ def save_config(state: AppState) -> None:
     path = _config_path()
     path.parent.mkdir(parents=True, exist_ok=True)
 
+    source_root = getattr(state, "source_root", Path.cwd())
+    output_path = getattr(state, "output_path", Path("extracted.txt"))
+
     data: Dict[str, Any] = {
-        "source_root": str(state.source_root),
-        "output_path": str(state.output_path),
+        "source_root": str(Path(source_root)),
+        "output_path": str(Path(output_path)),
         "max_size_kb": int(state.max_size_kb),
         "compact_mode": bool(state.compact_mode),
         "skip_empty": bool(state.skip_empty),

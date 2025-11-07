@@ -1,11 +1,12 @@
 # Proxtract
 
-Proxtract is an interactive CLI for extracting readable project files into a single bundle that is easy to share with large language models.
+Proxtract is a Rich + prompt_toolkit powered CLI that extracts readable project files into a single bundle that is easy to share with large language models.
 
 ## Features
-- Rich-powered TUI with colorized output, tables, and progress indicators
-- Session state for configurable extraction settings
-- Command suite for quick extraction, configuration, and help
+- Instant console REPL with history + Tab completion via `prompt_toolkit`
+- Rich panels, tables, and progress bars for clear status updates
+- Shared configuration state between the REPL and the traditional `extract` subcommand
+- Optional persistence to `settings.toml` for quick reloads across sessions
 
 ## Installation
 
@@ -21,25 +22,29 @@ pip install proxtract[banner]
 
 ## Usage
 
-Launch the TUI with:
+Launching `proxtract` or `prx` without arguments opens the interactive REPL:
 
 ```bash
 proxtract
 ```
 
-Or reach for the compact alias:
+At the prompt type `help` (or press `Tab`) to see the available commands:
 
-```bash
-prx
-```
+| Command | Description |
+| --- | --- |
+| `extract [SOURCE] [OUTPUT]` | Run an extraction. Paths fallback to the current config and are prompted for when missing. |
+| `set <key> <value>` | Update configuration. Keys: `source_path`, `output_path`, `max_size_kb`, `compact_mode`, `skip_empty`, `use_gitignore`, `force_include`, `include_patterns`, `exclude_patterns`, `count_tokens`, `tokenizer_model`, `copy_clipboard`. |
+| `show` / `config` | Render the current settings table. |
+| `save` | Persist settings to `~/.config/proxtract/settings.toml`. |
+| `help` | Show the command list. |
+| `exit` / `quit` | Leave the REPL. |
 
-Inside the session use `/help` to see available commands. Typical flow:
+The REPL provides:
+- Tab completion for commands, setting keys, boolean values, and filesystem paths.
+- Arrow-key command history (stored under `~/.config/proxtract/history` when possible).
+- Rich progress bars during extraction plus a summary table on completion.
 
-1. Adjust defaults with `/settings` if needed.
-2. Run `/extract <path> [output_file]` to stream project files into one document.
-3. Exit anytime with `/exit`.
-
-Settings keys accept handy aliases: `/settings max 1024`, `/settings out merged.txt`, `/settings compact off`, `/settings empty on`.
+### Scripted CLI
 
 Run a one-off extraction directly from the shell with the short form:
 
@@ -67,13 +72,13 @@ After installing, you can confirm the basics operate with the bundled smoke test
 python scripts/smoke_test.py
 ```
 
-The script launches the TUI (and exits cleanly) and performs a one-file extraction using the public API.
+The script ensures the CLI help works and performs a one-file extraction using the public API.
 
 ## Development
 - Python 3.9+
 - Dependencies managed via `pyproject.toml`
 
-Run the TUI locally without installing by executing `python -m proxtract` from the project root. The banner gracefully falls back to ASCII art if the optional `art` dependency is unavailable.
+Run the interactive REPL locally without installing by executing `python -m proxtract` from the project root. The banner gracefully falls back to ASCII art if the optional `art` dependency is unavailable.
 
 For editable development installs, use:
 

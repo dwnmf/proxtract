@@ -1,4 +1,4 @@
-"""Entry point for launching the Proxtract CLI and TUI."""
+"""Entry point for launching the Proxtract CLI and interactive REPL."""
 
 from __future__ import annotations
 
@@ -9,8 +9,8 @@ from typing import Optional, Sequence
 
 from rich.console import Console
 
+from .interactive import run_interactive
 from .state import AppState
-from .tui.app import ProxtractApp
 
 try:  # Shell auto-completion support
     import argcomplete  # type: ignore
@@ -103,11 +103,6 @@ def _run_cli_extract(args: argparse.Namespace, console: Console) -> int:
     return 0
 
 
-def _launch_tui() -> None:
-    state = apply_config(AppState(), load_config())
-    ProxtractApp(state).run()
-
-
 def main(argv: Optional[Sequence[str]] = None) -> None:
     program_name = Path(sys.argv[0]).name or "proxtract"
     parser = argparse.ArgumentParser(prog=program_name, allow_abbrev=False)
@@ -168,7 +163,7 @@ def main(argv: Optional[Sequence[str]] = None) -> None:
         argcomplete.autocomplete(parser)  # type: ignore[call-arg]
 
     if not args_list:
-        _launch_tui()
+        run_interactive(Console())
         return
 
     args = parser.parse_args(args_list)
@@ -176,7 +171,7 @@ def main(argv: Optional[Sequence[str]] = None) -> None:
     if args.command == "extract":
         raise SystemExit(_run_cli_extract(args, Console()))
 
-    _launch_tui()
+    run_interactive(Console())
 
 
 if __name__ == "__main__":  # pragma: no cover

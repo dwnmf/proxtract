@@ -27,7 +27,7 @@ classifiers = [
 ]
 dependencies = [
     "rich>=13.7.0",
-    "textual>=0.60",
+    "prompt_toolkit>=3.0.43",
     "argcomplete>=3.1.4"
 ]
 
@@ -86,7 +86,6 @@ markers = [
     "slow: marks tests as slow (deselect with '-m \"not slow\"')",
     "integration: marks tests as integration tests",
     "unit: marks tests as unit tests",
-    "tui: marks tests as TUI-related",
     "cli: marks tests as CLI-related",
     "core: marks tests as core functionality",
     "config: marks tests as configuration-related"
@@ -95,7 +94,6 @@ filterwarnings = [
     "error",
     "ignore::UserWarning",
     "ignore::DeprecationWarning:rich.*",
-    "ignore::DeprecationWarning:textual.*"
 ]
 
 [tool.coverage.run]
@@ -104,7 +102,6 @@ omit = [
     "*/tests/*",
     "*/test_*",
     "setup.py",
-    "src/proxtract/tui/*",
 ]
 
 [tool.coverage.report]
