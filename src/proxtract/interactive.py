@@ -332,21 +332,21 @@ class InteractiveShell:
     def _show_config(self) -> None:
         # Render settings without any Rich markup/ANSI so output is always clean,
         # even in environments that escape or corrupt control sequences.
-        if not self._color_enabled:
-            # Plain ASCII table to avoid broken escape sequences.
-            rows = list(self._iter_config())
-            if not rows:
-                self.console.print("Нет доступных настроек.")
-                return
+        rows = list(self._iter_config())
+        if not rows:
+            self.console.print("Нет доступных настроек.")
+            return
 
+        if self._plain_output:
+            # Plain ASCII table to avoid broken escape sequences.
             key_width = max(len(k) for k, _ in rows)
             val_width = max(len(v) for _, v in rows)
 
+            self.console.print("\nТекущие настройки\n")
             top_border = "┏" + "━" * (key_width + 2) + "┳" + "━" * (val_width + 2) + "┓"
             header = f"┃ {'Параметр'.ljust(key_width)} ┃ {'Значение'.ljust(val_width)} ┃"
             sep = "┡" + "━" * (key_width + 2) + "╇" + "━" * (val_width + 2) + "┩"
 
-            self.console.print("Текущие настройки")
             self.console.print(top_border)
             self.console.print(header)
             self.console.print(sep)
@@ -360,7 +360,7 @@ class InteractiveShell:
         table = Table(title="Текущие настройки", header_style="bold blue")
         table.add_column("Параметр", style="cyan", no_wrap=True)
         table.add_column("Значение", style="white")
-        for key, value in self._iter_config():
+        for key, value in rows:
             table.add_row(key, value)
         self.console.print(table)
 
