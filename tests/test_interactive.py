@@ -1,56 +1,69 @@
-"""Unit tests for the Rich REPL implementation."""
-
 from __future__ import annotations
 
 import sys
 from pathlib import Path
 
 import pytest
-from rich.console import Console
+from textual.widgets import Checkbox, Input
 
 from proxtract.core import ExtractionStats
-from proxtract.interactive import (
-    PROMPT_TOOLKIT_AVAILABLE,
-    Document,
-    InteractiveShell,
-    ProxtractCompleter,
-    _tokenize,
-)
+from proxtract.interactive import InteractiveShell
 from proxtract.state import AppState
 
 
-def _make_shell(tmp_path) -> tuple[InteractiveShell, Console, AppState]:
-    console = Console(record=True)
+@pytest.mark.asyncio
+async def test_app_populates_form(tmp_path):
     state = AppState()
     state.set_source_root(tmp_path)
     state.set_output_path(tmp_path / "result.txt")
-    shell = InteractiveShell(console=console, state=state)
-    return shell, console, state
+    state.max_size_kb = 256
+    state.include_patterns = ["src/**/*.py"]
+    state.exclude_patterns = ["tests/**"]
+    state.compact_mode = False
+
+    app = InteractiveShell(state=state)
+    async with app.run_test() as _:
+        assert app.query_one("#source_path", Input).value == str(tmp_path)
+        assert app.query_one("#output_path", Input).value == str(tmp_path / "result.txt")
+        assert app.query_one("#max_size_kb", Input).value == "256"
+        assert app.query_one("#include_patterns", Input).value == "src/**/*.py"
+        assert app.query_one("#exclude_patterns", Input).value == "tests/**"
+        assert app.query_one("#compact_mode", Checkbox).value is False
 
 
-def test_set_command_updates_state(tmp_path):
-    shell, console, state = _make_shell(tmp_path)
+@pytest.mark.asyncio
+async def test_update_state_from_form(tmp_path):
+    state = AppState()
+    state.set_source_root(tmp_path)
+    state.set_output_path(tmp_path / "result.txt")
 
-    shell.handle_command(f"set source_path {tmp_path}")
-    assert state.source_root == tmp_path
-    assert "source_path обновлен" in console.export_text()
+    app = InteractiveShell(state=state)
+    async with app.run_test() as _:
+        app.query_one("#max_size_kb", Input).value = "128"
+        app.query_one("#include_patterns", Input).value = "*.py, *.md"
+        app.query_one("#exclude_patterns", Input).value = "tests/**"
+        app.query_one("#compact_mode", Checkbox).value = False
+        app.query_one("#count_tokens", Checkbox).value = False
+
+        app._update_state_from_form()
+
+    assert state.max_size_kb == 128
+    assert state.include_patterns == ["*.py", "*.md"]
+    assert state.exclude_patterns == ["tests/**"]
+    assert state.compact_mode is False
+    assert state.enable_token_count is False
 
 
-def test_show_command_renders_table(tmp_path):
-    shell, console, _ = _make_shell(tmp_path)
-
-    shell.handle_command("show")
-    rendered = console.export_text()
-    assert "source_path" in rendered
-
-
-def test_extract_command_invokes_extractor(monkeypatch, tmp_path):
-    shell, console, state = _make_shell(tmp_path)
-    output_path = shell.state.output_path
+@pytest.mark.asyncio
+async def test_run_extraction(monkeypatch, tmp_path):
+    state = AppState()
+    state.set_source_root(tmp_path)
+    output = tmp_path / "result.txt"
+    state.set_output_path(output)
 
     stats = ExtractionStats(
         root=tmp_path,
-        output=output_path,
+        output=output,
         processed_paths=["file.py"],
         total_bytes=128,
         skipped_paths={},
@@ -58,167 +71,112 @@ def test_extract_command_invokes_extractor(monkeypatch, tmp_path):
     )
 
     class FakeExtractor:
-        def __init__(self) -> None:
-            self.calls: list[tuple[Path, Path]] = []
-
-        def extract(self, root: Path, output: Path, progress_callback=None):
-            self.calls.append((Path(root), Path(output)))
+        def extract(self, root: Path, destination: Path, progress_callback=None):
             if progress_callback:
                 progress_callback(description="file.py")
+            destination.write_text("payload", encoding="utf-8")
             return stats
 
-    fake = FakeExtractor()
-    monkeypatch.setattr(state, "create_extractor", lambda: fake)
+    monkeypatch.setattr(state, "create_extractor", lambda: FakeExtractor())
 
-    shell.handle_command("extract")
+    app = InteractiveShell(state=state)
+    async with app.run_test() as pilot:
+        await pilot.click("#run")
+        await pilot.pause()
 
-    assert fake.calls and fake.calls[0][0] == tmp_path
     assert state.last_stats == stats
-    assert "Готово" in console.export_text()
+    assert any("Готово" in message for message in app.messages)
+    assert any("file.py" in message for message in app.messages)
 
 
-def test_extract_with_missing_root(tmp_path):
-    tmp_dir = tmp_path / "missing"
-    console = Console(record=True)
+@pytest.mark.asyncio
+async def test_run_extraction_missing_root(tmp_path):
     state = AppState()
-    state.set_source_root(tmp_dir)
-    shell = InteractiveShell(console=console, state=state)
+    state.set_source_root(tmp_path / "missing")
+    state.set_output_path(tmp_path / "result.txt")
 
-    shell.handle_command("extract")
-    assert "Укажите корректный source_path" in console.export_text()
+    app = InteractiveShell(state=state)
+    async with app.run_test() as pilot:
+        await pilot.click("#run")
+        await pilot.pause()
+
+    assert any("Укажите корректный" in message for message in app.messages)
 
 
-def test_save_command_invokes_config(monkeypatch, tmp_path):
-    shell, console, state = _make_shell(tmp_path)
-    called = {}
+@pytest.mark.asyncio
+async def test_save_button(monkeypatch, tmp_path):
+    state = AppState()
+    state.set_source_root(tmp_path)
+    state.set_output_path(tmp_path / "result.txt")
 
-    def fake_save(arg):
-        called["state"] = arg
+    saved: dict[str, AppState] = {}
+
+    def fake_save(arg: AppState) -> None:
+        saved["state"] = arg
 
     monkeypatch.setattr("proxtract.interactive.save_config", fake_save)
-    shell.handle_command("save")
-    assert called.get("state") is state
-    assert "Настройки сохранены" in console.export_text()
+
+    app = InteractiveShell(state=state)
+    async with app.run_test() as pilot:
+        await pilot.click("#save")
+        await pilot.pause()
+
+    assert saved.get("state") is state
+    assert any("Настройки сохранены" in message for message in app.messages)
 
 
-def test_unknown_set_key(tmp_path):
-    shell, console, _ = _make_shell(tmp_path)
-    shell.handle_command("set not_a_key 1")
-    assert "Неизвестный параметр" in console.export_text()
+@pytest.mark.asyncio
+async def test_invalid_max_size(tmp_path):
+    state = AppState()
+    state.set_source_root(tmp_path)
+    state.set_output_path(tmp_path / "result.txt")
+
+    app = InteractiveShell(state=state)
+    async with app.run_test() as pilot:
+        app.query_one("#max_size_kb", Input).value = "not-a-number"
+        await pilot.click("#run")
+        await pilot.pause()
+
+    assert any("max_size_kb должно быть числом" in message for message in app.messages)
 
 
-def test_set_boolean_and_validation(tmp_path):
-    shell, console, state = _make_shell(tmp_path)
-    shell.handle_command("set compact_mode off")
-    assert state.compact_mode is False
-    shell.handle_command("set compact_mode on")
-    assert state.compact_mode is True
-    shell.handle_command("set compact_mode maybe")
-    assert "Ошибка" in console.export_text()
+@pytest.mark.asyncio
+async def test_copy_to_clipboard(monkeypatch, tmp_path):
+    state = AppState()
+    state.set_source_root(tmp_path)
+    output = tmp_path / "result.txt"
+    output.write_text("payload", encoding="utf-8")
+    state.set_output_path(output)
+    state.copy_to_clipboard = True
 
-
-def test_help_command_lists_entries(tmp_path):
-    shell, console, _ = _make_shell(tmp_path)
-    shell.handle_command("help")
-    text = console.export_text()
-    assert "extract" in text
-    assert "set <key> <value>" in text
-
-
-def test_config_alias(tmp_path):
-    shell, console, _ = _make_shell(tmp_path)
-    shell.handle_command("config")
-    assert "Текущие настройки" in console.export_text()
-
-
-def test_unknown_command(tmp_path):
-    shell, console, _ = _make_shell(tmp_path)
-    shell.handle_command("foobar")
-    assert "Неизвестная команда" in console.export_text()
-
-
-def test_slash_prefixed_commands(tmp_path):
-    shell, console, _ = _make_shell(tmp_path)
-    shell.handle_command("/help")
-    assert "Команда" in console.export_text()
-    shell.handle_command("/show")
-    assert "source_path" in console.export_text()
-
-
-@pytest.mark.skipif(PROMPT_TOOLKIT_AVAILABLE, reason="Prompt toolkit present")
-def test_run_without_prompt_toolkit(tmp_path):
-    shell, console, _ = _make_shell(tmp_path)
-    shell.run()
-    assert "prompt_toolkit is required" in console.export_text()
-
-
-def test_completer_suggests_commands():
-    completer = ProxtractCompleter()
-    doc = Document(text="", cursor_position=0)
-    suggestions = [c.text for c in completer.get_completions(doc, None)]
-    assert "extract" in suggestions
-
-    doc_set = Document(text="set ", cursor_position=4)
-    next_suggestions = [c.text for c in completer.get_completions(doc_set, None)]
-    assert "source_path" in next_suggestions
-
-    doc_bool = Document(text="set compact_mode o", cursor_position=len("set compact_mode o"))
-    bool_suggestions = [c.text for c in completer.get_completions(doc_bool, None)]
-    assert "on" in bool_suggestions
-
-    doc_slash = Document(text="/e", cursor_position=2)
-    slash_suggestions = [c.text for c in completer.get_completions(doc_slash, None)]
-    assert "/extract" in slash_suggestions
-
-
-def test_tokenize_handles_trailing_space():
-    tokens = _tokenize("set foo ")
-    assert tokens[-1] == ""
-
-
-def test_try_copy_reads_file(monkeypatch, tmp_path):
-    shell, console, _ = _make_shell(tmp_path)
-    output_file = tmp_path / "result.txt"
-    output_file.write_text("payload", encoding="utf-8")
     stats = ExtractionStats(
         root=tmp_path,
-        output=output_file,
-        processed_paths=[],
-        total_bytes=0,
+        output=output,
+        processed_paths=["file.py"],
+        total_bytes=128,
         skipped_paths={},
         errors=[],
     )
+
+    class FakeExtractor:
+        def extract(self, root: Path, destination: Path, progress_callback=None):
+            return stats
 
     class DummyClipboard:
         def __init__(self) -> None:
             self.value = None
 
-        def copy(self, text: str) -> None:
-            self.value = text
+        def copy(self, value: str) -> None:
+            self.value = value
 
     clipboard = DummyClipboard()
     monkeypatch.setitem(sys.modules, "pyperclip", clipboard)
+    monkeypatch.setattr(state, "create_extractor", lambda: FakeExtractor())
 
-    shell._try_copy(stats)
+    app = InteractiveShell(state=state)
+    async with app.run_test() as pilot:
+        await pilot.click("#run")
+        await pilot.pause()
+
     assert clipboard.value == "payload"
-    assert "Результат скопирован" in console.export_text()
-
-
-def test_build_summary_panel_includes_optional_data(tmp_path):
-    shell, console, _ = _make_shell(tmp_path)
-    stats = ExtractionStats(
-        root=tmp_path,
-        output=tmp_path / "out.txt",
-        processed_paths=["a.py"],
-        total_bytes=42,
-        skipped_paths={"binary": ["b.dat"]},
-        errors=["warning"],
-        token_count=10,
-        token_model="gpt-4",
-    )
-    panel = shell._build_summary_panel(stats)
-    console.print(panel)
-    text = console.export_text()
-    assert "Tokens" in text
-    assert "Skipped" in text
-    assert "Warnings" in text
+    assert any("Результат скопирован" in message for message in app.messages)
