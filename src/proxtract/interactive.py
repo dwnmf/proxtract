@@ -1,550 +1,348 @@
-"""Rich + prompt_toolkit powered REPL for Proxtract."""
+"""Textual-powered interface for Proxtract."""
 
 from __future__ import annotations
 
-import shlex
-from contextlib import nullcontext
 from pathlib import Path
-from typing import Iterable, List, Sequence
+from typing import Iterable
 
-try:  # pragma: no cover - optional import guarded for minimal envs
-    from prompt_toolkit import PromptSession  # type: ignore
-    from prompt_toolkit.completion import Completer, Completion, PathCompleter, WordCompleter  # type: ignore
-    from prompt_toolkit.document import Document  # type: ignore
-    from prompt_toolkit.history import FileHistory, InMemoryHistory  # type: ignore
-    from prompt_toolkit.patch_stdout import patch_stdout  # type: ignore
-
-    PROMPT_TOOLKIT_AVAILABLE = True
-except Exception:  # pragma: no cover - fallback when prompt_toolkit absent
-    PromptSession = None  # type: ignore
-    PROMPT_TOOLKIT_AVAILABLE = False
-
-    class Completion:  # type: ignore[override]
-        def __init__(self, text: str, start_position: int = 0, display=None, display_meta=None) -> None:
-            self.text = text
-            self.start_position = start_position
-            self.display = display
-            self.display_meta = display_meta
-
-    class Completer:  # type: ignore[override]
-        def get_completions(self, *args, **kwargs):
-            return []
-
-    class WordCompleter(Completer):  # type: ignore[override]
-        def __init__(self, words, **_):
-            self.words = list(words)
-
-    class PathCompleter(Completer):  # type: ignore[override]
-        def __init__(self, **_):
-            pass
-
-        def get_completions(self, *args, **kwargs):
-            return []
-
-    class Document:  # type: ignore[override]
-        def __init__(self, text: str = "", cursor_position: int | None = None) -> None:
-            self.text = text
-            self.cursor_position = len(text) if cursor_position is None else cursor_position
-
-        @property
-        def text_before_cursor(self) -> str:
-            return self.text[: self.cursor_position]
-
-        def get_word_before_cursor(self) -> str:
-            text = self.text_before_cursor.rstrip()
-            return text.split()[-1] if text.split() else ""
-
-    class InMemoryHistory:  # type: ignore[override]
-        def __init__(self, *_, **__):
-            pass
-
-    class FileHistory(InMemoryHistory):  # type: ignore[override]
-        def __init__(self, *_, **__):
-            raise RuntimeError("prompt_toolkit is required for persistent history support")
-
-    def patch_stdout():  # type: ignore[override]
-        return nullcontext()
 from rich.console import Console
-from rich.panel import Panel
-from rich.progress import BarColumn, Progress, SpinnerColumn, TextColumn, TimeElapsedColumn
-from rich.table import Table
-from rich.text import Text
+from textual.app import App, ComposeResult
+from textual.binding import Binding
+from textual.containers import Container, Grid, Horizontal, Vertical
+from textual.widgets import Button, Checkbox, Footer, Input, Log, Static
 
 from .config import apply_config, load_config, save_config
 from .core import ExtractionError, ExtractionStats
 from .state import AppState
-from .utils import create_console
-
-COMMANDS = ["extract", "set", "show", "config", "save", "help", "exit", "quit"]
-SETTING_KEYS = [
-    "source_path",
-    "output_path",
-    "max_size_kb",
-    "compact_mode",
-    "skip_empty",
-    "use_gitignore",
-    "force_include",
-    "include_patterns",
-    "exclude_patterns",
-    "count_tokens",
-    "tokenizer_model",
-    "copy_clipboard",
-]
-BOOLEAN_KEYS = {
-    "compact_mode",
-    "skip_empty",
-    "use_gitignore",
-    "force_include",
-    "count_tokens",
-    "copy_clipboard",
-}
-PATH_KEYS = {"source_path", "output_path"}
-PATH_ONLY_DIR_KEYS = {"source_path"}
 
 
-def _history_path() -> Path:
-    return Path("~/.config/proxtract/history").expanduser()
+class InteractiveShell(App[None]):
+    """Minimalistic gradient Textual interface for Proxtract."""
 
+    CSS = """
+    Screen {
+        layout: vertical;
+        align: center middle;
+        background: linear-gradient(160deg, #1a1f35, #2c3a5b);
+        color: #f7f9ff;
+    }
 
-def _tokenize(command: str) -> List[str]:
-    stripped = command.strip()
-    if not stripped:
-        return []
-    try:
-        tokens = shlex.split(command)
-    except ValueError:
-        # Fallback to simple whitespace split if quoting is incomplete
-        tokens = command.split()
-    if command.endswith((" ", "\t")):
-        tokens.append("")
-    return tokens
+    #card {
+        width: 90%;
+        max-width: 120;
+        border: round #7f5af0;
+        background: linear-gradient(160deg, rgba(26, 31, 53, 0.95), rgba(16, 19, 33, 0.95));
+        padding: 2 4;
+        margin: 2;
+        height: auto;
+        box-sizing: border-box;
+    }
 
+    .title {
+        content-align: center middle;
+        text-style: bold;
+        font-size: 2;
+    }
 
-class ProxtractCompleter(Completer):
-    """Context-aware completer for the REPL."""
+    .subtitle {
+        content-align: center middle;
+        color: #b1b8e6;
+        margin-bottom: 1;
+    }
 
-    def __init__(self) -> None:
-        self._command_words = WordCompleter(COMMANDS, ignore_case=True)
-        self._setting_words = WordCompleter(SETTING_KEYS, ignore_case=True)
-        self._boolean_words = WordCompleter(["on", "off"], ignore_case=True)
-        self._path_completer = PathCompleter(expanduser=True)
-        self._dir_completer = PathCompleter(expanduser=True, only_directories=True)
+    #form {
+        grid-size: 2;
+        grid-gutter: 1 2;
+        margin-top: 1;
+    }
 
-    def _complete_from_word_completer(
-        self, completer: WordCompleter, word: str
-    ) -> Iterable[Completion]:
-        prefix = ""
-        lookup = word
-        if lookup.startswith("/"):
-            prefix = "/"
-            lookup = lookup[1:]
-        start_position = -len(word)
-        lowered = lookup.lower()
-        for candidate in completer.words:  # type: ignore[attr-defined]
-            if lowered and not candidate.lower().startswith(lowered):
-                continue
-            candidate_text = prefix + candidate
-            yield Completion(candidate_text, start_position=start_position)
+    #form > .label {
+        align-horizontal: right;
+        color: #9da6d4;
+    }
 
-    def _complete_path(self, word: str, *, directories_only: bool, complete_event) -> Iterable[Completion]:
-        completer = self._dir_completer if directories_only else self._path_completer
-        fake_document = Document(text=word, cursor_position=len(word))
-        for item in completer.get_completions(fake_document, complete_event):
-            yield Completion(
-                item.text,
-                start_position=-len(word),
-                display=item.display,
-                display_meta=item.display_meta,
-            )
+    #form Input {
+        background: rgba(15, 18, 30, 0.6);
+        border: round #3d4469;
+    }
 
-    def get_completions(self, document: Document, complete_event) -> Iterable[Completion]:
-        text = document.text_before_cursor
-        tokens = _tokenize(text)
-        raw_command = tokens[0] if tokens else document.get_word_before_cursor()
-        if not tokens:
-            yield from self._complete_from_word_completer(self._command_words, raw_command)
-            return
+    #toggles {
+        margin-top: 1;
+        padding-top: 1;
+        border-top: solid #2f3452;
+        layout: vertical;
+        gap: 1;
+    }
 
-        if tokens[-1] == "":
-            current_word = ""
-        else:
-            current_word = document.get_word_before_cursor()
+    .toggle {
+        layout: horizontal;
+        align: center left;
+        gap: 1;
+    }
 
-        command = tokens[0].lower()
-        token_count = len(tokens)
-        if token_count == 1 and current_word != "":
-            yield from self._complete_from_word_completer(self._command_words, raw_command)
-            return
+    .section-label {
+        text-style: bold;
+        color: #d3dcff;
+        margin-bottom: 1;
+    }
 
-        if command in {"exit", "quit", "help", "show", "config", "save"}:
-            return
+    #buttons {
+        layout: horizontal;
+        gap: 2;
+        margin-top: 2;
+        content-align: center middle;
+        flex-wrap: wrap;
+    }
 
-        if command == "set":
-            if token_count <= 2 and not text.endswith(" "):
-                yield from self._complete_from_word_completer(self._setting_words, current_word)
-                return
-            if token_count == 2 and text.endswith(" "):
-                yield from self._complete_from_word_completer(self._setting_words, "")
-                return
+    Button.action {
+        border: round #7f5af0;
+        background: linear-gradient(160deg, #41348f, #2e1f66);
+        color: #fefbff;
+        padding: 1 3;
+    }
 
-            key = tokens[1].lower() if len(tokens) > 1 else ""
-            if key in BOOLEAN_KEYS:
-                yield from self._complete_from_word_completer(self._boolean_words, current_word)
-                return
-            if key in PATH_KEYS:
-                directories_only = key in PATH_ONLY_DIR_KEYS
-                yield from self._complete_path(current_word, directories_only=directories_only, complete_event=complete_event)
-                return
-            if key:
-                return
+    Button.success {
+        background: linear-gradient(160deg, #2ebf91, #1a8c6d);
+    }
 
-        if command == "extract":
-            if token_count <= 2:
-                yield from self._complete_path(current_word, directories_only=True, complete_event=complete_event)
-                return
-            if token_count == 3:
-                yield from self._complete_path(current_word, directories_only=False, complete_event=complete_event)
-                return
+    Button.warning {
+        background: linear-gradient(160deg, #f5a623, #d48806);
+    }
 
+    Button.danger {
+        background: linear-gradient(160deg, #ff5f6d, #d9344b);
+    }
 
-class InteractiveShell:
-    """Interactive REPL for Proxtract commands."""
+    #log {
+        height: 14;
+        margin-top: 2;
+        border: round #3d4469;
+        background: rgba(10, 12, 20, 0.6);
+    }
+    """
 
-    PROMPT = "proxtract> "
+    BINDINGS = [
+        Binding("ctrl+c", "quit", "Выйти"),
+        Binding("ctrl+s", "save", "Сохранить"),
+        Binding("f5", "refresh", "Обновить"),
+    ]
 
-    def __init__(self, console: Console | None = None, state: AppState | None = None) -> None:
-        self.state = state or apply_config(AppState(), load_config())
+    def __init__(self, *, state: AppState | None = None) -> None:
+        super().__init__()
+        self.state = apply_config(state or AppState(), load_config())
+        self._log_widget: Log | None = None
+        self._messages: list[str] = []
 
-        # Always use our own console configuration so output is predictable.
-        # This avoids environments/wrappers mutating ESC and causing "?[xxm" artifacts.
-        if console is not None:
-            # If an external console is provided, mirror its plain/color preference
-            # into a fresh Proxtract console instance, instead of using it directly.
-            external_no_color = bool(getattr(console, "no_color", False))
-            external_color_system = getattr(console, "color_system", None)
-            want_plain = external_no_color or not external_color_system
-            self.console = create_console(plain=want_plain)
-        else:
-            self.console = create_console()
+    def compose(self) -> ComposeResult:
+        with Container(id="card"):
+            yield Static("Proxtract", classes="title")
+            yield Static("Минималистичный текстовый интерфейс на Textual.", classes="subtitle")
+            with Grid(id="form"):
+                yield Static("Source path", classes="label")
+                yield Input(id="source_path", placeholder="Путь к проекту")
+                yield Static("Output file", classes="label")
+                yield Input(id="output_path", placeholder="Файл для сохранения")
+                yield Static("Max size (KB)", classes="label")
+                yield Input(id="max_size_kb", placeholder="500")
+                yield Static("Tokenizer model", classes="label")
+                yield Input(id="tokenizer_model", placeholder="gpt-4o")
+                yield Static("Include patterns", classes="label")
+                yield Input(id="include_patterns", placeholder="src/**/*.py, README.md")
+                yield Static("Exclude patterns", classes="label")
+                yield Input(id="exclude_patterns", placeholder="tests/**")
+            with Vertical(id="toggles"):
+                yield Static("Флаги", classes="section-label")
+                for checkbox in self._build_toggle_section():
+                    yield checkbox
+            with Horizontal(id="buttons"):
+                yield Button("Извлечь", id="run", classes="action success")
+                yield Button("Сохранить", id="save", classes="action")
+                yield Button("Обновить", id="refresh", classes="action warning")
+                yield Button("Выход", id="quit", classes="action danger")
+            yield Log(id="log")
+        yield Footer()
 
-        # Honor the explicit flag from create_console; fall back to no-color if missing.
-        color_enabled = getattr(self.console, "_proxtract_color_enabled", None)
-        if color_enabled is None:
-            # Conservative: default to plain to avoid leaking raw escape sequences.
-            color_enabled = False
-
-        self._color_enabled = bool(color_enabled)
-        self._plain_output = not self._color_enabled
-
-        self.completer = ProxtractCompleter()
-        self._session: PromptSession | None = None
-        self._running = True
-
-    def run(self) -> None:
-        self._render_banner()
-        try:
-            session = self._ensure_session()
-        except RuntimeError as exc:
-            self.console.print(Panel(f"[red]{exc}[/red]", border_style="red"))
-            return
-        with patch_stdout():
-            while self._running:
-                try:
-                    text = session.prompt(self.PROMPT)
-                except (KeyboardInterrupt, EOFError):
-                    self.console.print("[yellow]Type 'exit' or 'quit' to close Proxtract.[/yellow]")
-                    continue
-                if not text.strip():
-                    continue
-                if not self.handle_command(text):
-                    break
-
-    def handle_command(self, command: str) -> bool:
-        tokens = _tokenize(command)
-        if not tokens:
-            return True
-        cmd = tokens[0].lstrip("/").lower()
-        args = tokens[1:]
-
-        if cmd in {"exit", "quit"}:
-            self.console.print(Panel("[green]До встречи![/green]", border_style="green"))
-            return False
-        if cmd == "help":
-            self._show_help()
-            return True
-        if cmd in {"show", "config"}:
-            self._show_config()
-            return True
-        if cmd == "save":
-            self._save_config_command()
-            return True
-        if cmd == "set":
-            self._set_value(args)
-            return True
-        if cmd == "extract":
-            self._run_extract(args)
-            return True
-
-        self.console.print(Panel(f"[red]Неизвестная команда:[/red] {cmd}", border_style="red"))
-        return True
-
-    def _render_banner(self) -> None:
-        text = Text()
-        text.append("Proxtract\n", style="bold green")
-        text.append("Интерактивный REPL для извлечения файлов проектов.\n", style="cyan")
-        text.append("Команды: extract, set, show, save, help, exit", style="white")
-        self.console.print(Panel(text, border_style="cyan"))
-
-    def _ensure_session(self) -> PromptSession:
-        if self._session is not None:
-            return self._session
-        if not PROMPT_TOOLKIT_AVAILABLE or PromptSession is None:
-            raise RuntimeError(
-                "prompt_toolkit is required for the interactive REPL. "
-                "Install it via 'pip install prompt_toolkit' or reinstall Proxtract with the new dependencies."
-            )
-        history_path = _history_path()
-        try:
-            history_path.parent.mkdir(parents=True, exist_ok=True)
-            history = FileHistory(str(history_path))
-        except Exception:
-            history = InMemoryHistory()
-
-        self._session = PromptSession(
-            history=history,
-            completer=self.completer,
-            complete_while_typing=True,
+    def _build_toggle_section(self) -> Iterable[Checkbox]:
+        return (
+            Checkbox("Компактный режим", id="compact_mode"),
+            Checkbox("Пропускать пустые", id="skip_empty"),
+            Checkbox("Использовать .gitignore", id="use_gitignore"),
+            Checkbox("Принудительно включать", id="force_include"),
+            Checkbox("Считать токены", id="count_tokens"),
+            Checkbox("Копировать в буфер", id="copy_clipboard"),
         )
-        return self._session
 
-    def _show_help(self) -> None:
-        table = Table(show_header=True, header_style="bold magenta")
-        table.add_column("Команда", style="cyan", no_wrap=True)
-        table.add_column("Описание", style="white")
-        table.add_row("extract [src] [out]", "Запустить извлечение. Пути опциональны.")
-        table.add_row("set <key> <value>", "Изменить настройку (используйте Tab для подсказок).")
-        table.add_row("show / config", "Показать текущие настройки.")
-        table.add_row("save", "Сохранить настройки в settings.toml.")
-        table.add_row("help", "Отобразить эту справку.")
-        table.add_row("exit / quit", "Завершить работу.")
-        self.console.print(table)
+    async def on_mount(self) -> None:
+        self._log_widget = self.query_one(Log)
+        self._populate_form()
+        self._append_log("Интерфейс готов. Укажите параметры и нажмите \"Извлечь\".")
 
-    def _show_config(self) -> None:
-        # Render settings without any Rich markup/ANSI so output is always clean,
-        # even in environments that escape or corrupt control sequences.
-        rows = list(self._iter_config())
-        if not rows:
-            self.console.print("Нет доступных настроек.")
-            return
+    def _populate_form(self) -> None:
+        self.query_one("#source_path", Input).value = str(self.state.source_root)
+        self.query_one("#output_path", Input).value = str(self.state.output_path)
+        self.query_one("#max_size_kb", Input).value = str(self.state.max_size_kb)
+        self.query_one("#tokenizer_model", Input).value = self.state.tokenizer_model
+        self.query_one("#include_patterns", Input).value = ", ".join(self.state.include_patterns)
+        self.query_one("#exclude_patterns", Input).value = ", ".join(self.state.exclude_patterns)
+        self.query_one("#compact_mode", Checkbox).value = self.state.compact_mode
+        self.query_one("#skip_empty", Checkbox).value = self.state.skip_empty
+        self.query_one("#use_gitignore", Checkbox).value = self.state.use_gitignore
+        self.query_one("#force_include", Checkbox).value = self.state.force_include
+        self.query_one("#count_tokens", Checkbox).value = self.state.enable_token_count
+        self.query_one("#copy_clipboard", Checkbox).value = self.state.copy_to_clipboard
 
-        if self._plain_output:
-            # Plain ASCII table to avoid broken escape sequences.
-            key_width = max(len(k) for k, _ in rows)
-            val_width = max(len(v) for _, v in rows)
+    def _append_log(self, message: str) -> None:
+        self._messages.append(message)
+        if self._log_widget is not None:
+            self._log_widget.write_line(message)
 
-            self.console.print("\nТекущие настройки\n")
-            top_border = "┏" + "━" * (key_width + 2) + "┳" + "━" * (val_width + 2) + "┓"
-            header = f"┃ {'Параметр'.ljust(key_width)} ┃ {'Значение'.ljust(val_width)} ┃"
-            sep = "┡" + "━" * (key_width + 2) + "╇" + "━" * (val_width + 2) + "┩"
+    @property
+    def messages(self) -> list[str]:
+        return list(self._messages)
 
-            self.console.print(top_border)
-            self.console.print(header)
-            self.console.print(sep)
-            for key, value in rows:
-                self.console.print(f"│ {key.ljust(key_width)} │ {value.ljust(val_width)} │")
-            bottom_border = "└" + "─" * (key_width + 2) + "┴" + "─" * (val_width + 2) + "┘"
-            self.console.print(bottom_border)
-            return
+    async def on_button_pressed(self, event: Button.Pressed) -> None:
+        if event.button.id == "run":
+            await self._handle_run()
+        elif event.button.id == "save":
+            await self._handle_save()
+        elif event.button.id == "refresh":
+            await self._handle_refresh()
+        elif event.button.id == "quit":
+            await self.action_quit()
 
-        # Colored Rich table when ANSI is supported.
-        table = Table(title="Текущие настройки", header_style="bold blue")
-        table.add_column("Параметр", style="cyan", no_wrap=True)
-        table.add_column("Значение", style="white")
-        for key, value in rows:
-            table.add_row(key, value)
-        self.console.print(table)
+    async def action_save(self) -> None:
+        await self._handle_save()
 
-    def _iter_config(self) -> Iterable[tuple[str, str]]:
-        state = self.state
-        yield "source_path", str(state.source_root)
-        yield "output_path", str(state.output_path)
-        yield "max_size_kb", str(state.max_size_kb)
-        yield "compact_mode", "on" if state.compact_mode else "off"
-        yield "skip_empty", "on" if state.skip_empty else "off"
-        yield "use_gitignore", "on" if state.use_gitignore else "off"
-        yield "force_include", "on" if state.force_include else "off"
-        yield "include_patterns", ", ".join(state.include_patterns) or "-"
-        yield "exclude_patterns", ", ".join(state.exclude_patterns) or "-"
-        yield "count_tokens", "on" if state.enable_token_count else "off"
-        yield "tokenizer_model", state.tokenizer_model or "-"
-        yield "copy_clipboard", "on" if state.copy_to_clipboard else "off"
+    async def action_refresh(self) -> None:
+        await self._handle_refresh()
 
-    def _set_value(self, args: Sequence[str]) -> None:
-        if len(args) < 2:
-            self.console.print(Panel("[red]Использование: set <key> <value>[/red]", border_style="red"))
-            return
-        key = args[0].lower()
-        value = " ".join(args[1:])
-        handler = getattr(self, f"_set_{key}", None)
-        if handler is None:
-            self.console.print(Panel(f"[red]Неизвестный параметр:[/red] {key}", border_style="red"))
+    async def _handle_refresh(self) -> None:
+        self._populate_form()
+        self._append_log("Настройки восстановлены из текущего состояния.")
+
+    async def _handle_save(self) -> None:
+        try:
+            self._update_state_from_form()
+        except ValueError as exc:
+            self._append_log(f"[Ошибка] {exc}")
             return
         try:
-            handler(value)
-        except ValueError as exc:
-            self.console.print(Panel(f"[red]Ошибка:[/red] {exc}", border_style="red"))
+            save_config(self.state)
+        except Exception as exc:  # pragma: no cover - depends on file system
+            self._append_log(f"[Ошибка] Не удалось сохранить настройки: {exc}")
             return
-        self.console.print(Panel(f"[green]{key} обновлен.[/green]", border_style="green"))
+        self._append_log("Настройки сохранены.")
 
-    def _parse_bool(self, value: str) -> bool:
-        normalized = value.strip().lower()
-        if normalized in {"on", "true", "1", "yes"}:
-            return True
-        if normalized in {"off", "false", "0", "no"}:
-            return False
-        raise ValueError("Введите 'on' или 'off'")
-
-    def _set_source_path(self, value: str) -> None:
-        path = Path(value).expanduser()
-        if not path.exists():
-            raise ValueError("Путь не существует")
-        self.state.set_source_root(path)
-
-    def _set_output_path(self, value: str) -> None:
-        path = Path(value).expanduser()
-        self.state.set_output_path(path)
-
-    def _set_max_size_kb(self, value: str) -> None:
-        size = int(value)
-        if size <= 0:
-            raise ValueError("Размер должен быть больше нуля")
-        self.state.max_size_kb = size
-
-    def _set_compact_mode(self, value: str) -> None:
-        self.state.compact_mode = self._parse_bool(value)
-
-    def _set_skip_empty(self, value: str) -> None:
-        self.state.skip_empty = self._parse_bool(value)
-
-    def _set_use_gitignore(self, value: str) -> None:
-        self.state.use_gitignore = self._parse_bool(value)
-
-    def _set_force_include(self, value: str) -> None:
-        self.state.force_include = self._parse_bool(value)
-
-    def _set_include_patterns(self, value: str) -> None:
-        self.state.include_patterns = self._parse_patterns(value)
-
-    def _set_exclude_patterns(self, value: str) -> None:
-        self.state.exclude_patterns = self._parse_patterns(value)
-
-    def _set_count_tokens(self, value: str) -> None:
-        self.state.enable_token_count = self._parse_bool(value)
-
-    def _set_tokenizer_model(self, value: str) -> None:
-        self.state.tokenizer_model = value.strip() or self.state.tokenizer_model
-
-    def _set_copy_clipboard(self, value: str) -> None:
-        self.state.copy_to_clipboard = self._parse_bool(value)
-
-    def _parse_patterns(self, value: str) -> List[str]:
-        if not value.strip():
-            return []
-        return [item.strip() for item in value.split(",") if item.strip()]
-
-    def _run_extract(self, args: Sequence[str]) -> None:
-        source = args[0] if args else None
-        output = args[1] if len(args) > 1 else None
-        if source:
-            self.state.set_source_root(source)
-        if output:
-            self.state.set_output_path(output)
+    async def _handle_run(self) -> None:
+        try:
+            self._update_state_from_form()
+        except ValueError as exc:
+            self._append_log(f"[Ошибка] {exc}")
+            return
 
         root = self.state.source_root
         destination = self.state.output_path
 
         if not root.exists():
-            self.console.print(Panel("[red]Укажите корректный source_path.[/red]", border_style="red"))
+            self._append_log("[Ошибка] Укажите корректный source_path.")
             return
 
-        extractor = self.state.create_extractor()
-        use_progress = not self._plain_output and self.console.is_terminal
+        self._append_log(f"Начинаем извлечение из {root} в {destination}...")
+
         try:
-            if use_progress:
-                progress_columns = [
-                    SpinnerColumn(),
-                    TextColumn("[progress.description]{task.description}"),
-                    BarColumn(),
-                    TimeElapsedColumn(),
-                ]
-                with Progress(*progress_columns, refresh_per_second=10, console=self.console) as progress:
-                    task_id = progress.add_task("Извлечение...", start=False)
-
-                    def _callback(advance: int = 1, description: str | None = None) -> None:
-                        desc = description or "..."
-                        if not progress.tasks[task_id].started:
-                            progress.start_task(task_id)
-                        progress.update(task_id, advance=advance, description=desc)
-
-                    stats = extractor.extract(root, destination, progress_callback=_callback)
-            else:
-                self.console.print("Извлечение...")
-                stats = extractor.extract(root, destination)
+            stats = await self.call_in_thread(self._perform_extract, root, destination)
         except ExtractionError as exc:
-            self.console.print(Panel(f"[red]Ошибка извлечения:[/red] {exc}", border_style="red"))
+            self._append_log(f"[Ошибка] Извлечение завершилось с ошибкой: {exc}")
             return
-        except Exception as exc:  # pragma: no cover - defensive
-            self.console.print(Panel(f"[red]Непредвиденная ошибка:[/red] {exc}", border_style="red"))
+        except Exception as exc:  # pragma: no cover - unexpected errors
+            self._append_log(f"[Ошибка] Непредвиденная ошибка: {exc}")
             return
 
         self.state.last_stats = stats
-        self.console.print(self._build_summary_panel(stats))
-        if self.state.copy_to_clipboard:
-            self._try_copy(stats)
+        for line in self._format_summary(stats):
+            self._append_log(line)
 
-    def _build_summary_panel(self, stats: ExtractionStats) -> Panel:
-        table = Table.grid(padding=(0, 1))
-        table.add_column(justify="right", style="bold")
-        table.add_column()
-        table.add_row("Root", str(stats.root))
-        table.add_row("Output", str(stats.output))
-        table.add_row("Files", str(stats.processed_files))
-        table.add_row("Bytes", str(stats.total_bytes))
+        if self.state.copy_to_clipboard:
+            await self.call_in_thread(self._copy_to_clipboard, stats)
+
+    def _update_state_from_form(self) -> None:
+        source = self.query_one("#source_path", Input).value.strip()
+        output = self.query_one("#output_path", Input).value.strip()
+        max_size = self.query_one("#max_size_kb", Input).value.strip()
+        tokenizer = self.query_one("#tokenizer_model", Input).value.strip()
+        include_raw = self.query_one("#include_patterns", Input).value
+        exclude_raw = self.query_one("#exclude_patterns", Input).value
+
+        if not source:
+            raise ValueError("source_path не может быть пустым")
+        if not output:
+            raise ValueError("output_path не может быть пустым")
+
+        try:
+            size_value = int(max_size)
+        except ValueError as exc:
+            raise ValueError("max_size_kb должно быть числом") from exc
+        if size_value <= 0:
+            raise ValueError("max_size_kb должно быть больше нуля")
+
+        self.state.set_source_root(source)
+        self.state.set_output_path(output)
+        self.state.max_size_kb = size_value
+        self.state.tokenizer_model = tokenizer or self.state.tokenizer_model
+        self.state.include_patterns = self._parse_patterns(include_raw)
+        self.state.exclude_patterns = self._parse_patterns(exclude_raw)
+        self.state.compact_mode = self.query_one("#compact_mode", Checkbox).value
+        self.state.skip_empty = self.query_one("#skip_empty", Checkbox).value
+        self.state.use_gitignore = self.query_one("#use_gitignore", Checkbox).value
+        self.state.force_include = self.query_one("#force_include", Checkbox).value
+        self.state.enable_token_count = self.query_one("#count_tokens", Checkbox).value
+        self.state.copy_to_clipboard = self.query_one("#copy_clipboard", Checkbox).value
+
+    def _parse_patterns(self, value: str) -> list[str]:
+        if not value.strip():
+            return []
+        return [item.strip() for item in value.split(",") if item.strip()]
+
+    def _perform_extract(self, root: Path, destination: Path) -> ExtractionStats:
+        extractor = self.state.create_extractor()
+
+        def _callback(advance: int = 1, description: str | None = None) -> None:
+            if description:
+                self.call_from_thread(self._append_log, f"→ {description}")
+
+        return extractor.extract(root, destination, progress_callback=_callback)
+
+    def _format_summary(self, stats: ExtractionStats) -> Iterable[str]:
+        yield "[Готово] Извлечение завершено."
+        yield f"Файлов обработано: {stats.processed_files}"
+        yield f"Всего байт: {stats.total_bytes}"
         if stats.token_count is not None:
-            token_info = f"{stats.token_count}"
+            token_info = f"Токены: {stats.token_count}"
             if stats.token_model:
                 token_info += f" ({stats.token_model})"
-            table.add_row("Tokens", token_info)
-        skipped_summary = ", ".join(f"{reason}: {count}" for reason, count in stats.skipped.items() if count)
-        if skipped_summary:
-            table.add_row("Skipped", skipped_summary)
+            yield token_info
+        skipped = ", ".join(f"{reason}: {count}" for reason, count in stats.skipped.items() if count)
+        if skipped:
+            yield f"Пропущено: {skipped}"
         if stats.errors:
-            table.add_row("Warnings", " | ".join(stats.errors))
-        return Panel(table, title="[bold green]Готово[/bold green]", border_style="green")
+            yield "Предупреждения: " + " | ".join(stats.errors)
+        yield f"Результат: {stats.output}"
 
-    def _try_copy(self, stats: ExtractionStats) -> None:
+    def _copy_to_clipboard(self, stats: ExtractionStats) -> None:
         try:
             import pyperclip  # type: ignore
 
             contents = Path(stats.output).read_text(encoding="utf-8")
             pyperclip.copy(contents)
-            self.console.print(Panel("[green]Результат скопирован в буфер обмена.[/green]", border_style="green"))
-        except Exception as exc:  # pragma: no cover - platform dependent
-            self.console.print(Panel(f"[yellow]Не удалось скопировать:[/yellow] {exc}", border_style="yellow"))
-
-    def _save_config_command(self) -> None:
-        try:
-            save_config(self.state)
-        except Exception as exc:  # pragma: no cover - persistence is best effort
-            self.console.print(Panel(f"[red]Не удалось сохранить настройки:[/red] {exc}", border_style="red"))
-            return
-        self.console.print(Panel("[green]Настройки сохранены.[/green]", border_style="green"))
+            self.call_from_thread(self._append_log, "Результат скопирован в буфер обмена.")
+        except Exception as exc:  # pragma: no cover - platform specific
+            self.call_from_thread(self._append_log, f"[Предупреждение] Не удалось скопировать: {exc}")
 
 
-def run_interactive(console: Console | None = None) -> None:
-    """Entry helper used by ``proxtract`` when launched without arguments."""
+def run_interactive(console: Console | None = None) -> None:  # noqa: ARG001 - console retained for compatibility
+    """Launch the Textual interface."""
 
-    InteractiveShell(console=console).run()
+    InteractiveShell().run()
 
 
-__all__ = ["run_interactive", "InteractiveShell", "ProxtractCompleter"]
+__all__ = ["run_interactive", "InteractiveShell"]
